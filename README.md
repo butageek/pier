@@ -64,7 +64,7 @@ Nothing but one authenticated port is exposed: no SSH tunnels, no Docker API on 
 docker run -d --name pier-agent --restart unless-stopped \
   -e PIER_KEY=<shared-secret> -p 8080:8080 \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  ghcr.io/butageek/pier-agent:main
+  ghcr.io/butageek/pier-agent
 ```
 
 The image is rebuilt by CI whenever `agent/` changes. The Add-dialog snippet has
@@ -73,7 +73,7 @@ this command ready-made with your key and port embedded, plus a compose variant:
 ```yaml
 services:
   pier-agent:
-    image: ghcr.io/butageek/pier-agent:main
+    image: ghcr.io/butageek/pier-agent
     container_name: pier-agent
     restart: unless-stopped
     ports:

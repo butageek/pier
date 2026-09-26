@@ -31,11 +31,11 @@ export function DeviceForm({ onDone }: { onDone: () => void }) {
   const runCommand = `docker run -d --name pier-agent --restart unless-stopped \\
   -e PIER_KEY=${agentKey || "<key>"} -p ${port || "8080"}:8080 \\
   -v /var/run/docker.sock:/var/run/docker.sock \\
-  ghcr.io/butageek/pier-agent:main`;
+  ghcr.io/butageek/pier-agent`;
 
   const composeCommand = `services:
   pier-agent:
-    image: ghcr.io/butageek/pier-agent:main
+    image: ghcr.io/butageek/pier-agent
     container_name: pier-agent
     restart: unless-stopped
     ports:
