@@ -89,9 +89,9 @@ services:
 
 Alternatives:
 
-- Prebuilt image — CI publishes `pier-agent` to GHCR on every push
-  (`ghcr.io/<owner>/pier-agent`); once available on your fork, run it directly
-  with the same env/volumes (no `command:` needed).
+- Prebuilt image — CI publishes [pier-agent to GHCR](https://github.com/butageek/pier/pkgs/container/pier-agent)
+  on every change to `agent/`. Run it directly with the same env/volumes:
+  `docker run -d --name pier-agent --restart unless-stopped -e PIER_KEY=<secret> -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/butageek/pier-agent`
 - Plain Node — `agent/index.mjs` in this repo is the whole agent:
   `PIER_KEY=<shared-secret> node agent/index.mjs` (PORT, DOCKER_SOCKET envs optional).
 
