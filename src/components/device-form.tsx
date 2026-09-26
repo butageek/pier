@@ -28,18 +28,14 @@ export function DeviceForm({ onDone }: { onDone: () => void }) {
   const [showCmd, setShowCmd] = useState(true);
   const [port, setPort] = useState("8080");
 
-  // Where this Pier instance lives — the agent fetches its own script from here,
-  // so deployment needs no repo clone, no image build, no registry.
-  const pierOrigin = typeof window !== "undefined" ? window.location.origin : "http://<pier-host>:3000";
-
   const runCommand = `docker run -d --name pier-agent --restart unless-stopped \\
   -e PIER_KEY=${agentKey || "<key>"} -p ${port || "8080"}:8080 \\
   -v /var/run/docker.sock:/var/run/docker.sock \\
-  node:24-alpine sh -c "wget -qO /agent.mjs ${pierOrigin}/agent.mjs && exec node /agent.mjs"`;
+  ghcr.io/butageek/pier-agent:main`;
 
   const composeCommand = `services:
   pier-agent:
-    image: node:24-alpine
+    image: ghcr.io/butageek/pier-agent:main
     container_name: pier-agent
     restart: unless-stopped
     ports:
@@ -47,9 +43,7 @@ export function DeviceForm({ onDone }: { onDone: () => void }) {
     environment:
       PIER_KEY: ${agentKey || "<key>"}
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: >
-      sh -c "wget -qO /agent.mjs ${pierOrigin}/agent.mjs && exec node /agent.mjs"`;
+      - /var/run/docker.sock:/var/run/docker.sock`;
 
   const activeCommand = cmdMode === "run" ? runCommand : composeCommand;
 
@@ -208,7 +202,7 @@ export function DeviceForm({ onDone }: { onDone: () => void }) {
             className="flex min-w-0 flex-1 items-center gap-1 text-left"
           >
             <ChevronDown className={cn("size-3.5 shrink-0 transition-transform", showCmd && "rotate-180")} />
-            <span className="truncate">Deploy pier-agent — no build or registry needed</span>
+            <span className="truncate">Deploy pier-agent — prebuilt image, just add the socket</span>
           </button>
           <div className="flex shrink-0 gap-1">
             {(["run", "compose"] as const).map((m) => (

@@ -60,21 +60,20 @@ reports your containers via the local Docker socket plus real host stats from `/
 Nothing but one authenticated port is exposed: no SSH tunnels, no Docker API on the network.
 
 ```bash
-# on each Docker-enabled server — self-contained, no repo clone, no image build:
+# on each Docker-enabled server — prebuilt image from GHCR:
 docker run -d --name pier-agent --restart unless-stopped \
   -e PIER_KEY=<shared-secret> -p 8080:8080 \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  node:24-alpine sh -c "wget -qO /agent.mjs http://<pier-host>:3000/agent.mjs && exec node /agent.mjs"
+  ghcr.io/butageek/pier-agent:main
 ```
 
-The stock Node image simply fetches `agent.mjs` from your running Pier instance
-(Pier serves it at `/agent.mjs`) and starts it. The Add-dialog snippet has this
-command ready-made with your key and Pier URL embedded, plus a compose variant:
+The image is rebuilt by CI whenever `agent/` changes. The Add-dialog snippet has
+this command ready-made with your key and port embedded, plus a compose variant:
 
 ```yaml
 services:
   pier-agent:
-    image: node:24-alpine
+    image: ghcr.io/butageek/pier-agent:main
     container_name: pier-agent
     restart: unless-stopped
     ports:
@@ -83,17 +82,16 @@ services:
       PIER_KEY: <shared-secret>
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    command: >
-      sh -c "wget -qO /agent.mjs http://<pier-host>:3000/agent.mjs && exec node /agent.mjs"
 ```
 
 Alternatives:
 
-- Prebuilt image — CI publishes [pier-agent to GHCR](https://github.com/butageek/pier/pkgs/container/pier-agent)
-  on every change to `agent/`. Run it directly with the same env/volumes:
-  `docker run -d --name pier-agent --restart unless-stopped -e PIER_KEY=<secret> -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/butageek/pier-agent`
 - Plain Node — `agent/index.mjs` in this repo is the whole agent:
   `PIER_KEY=<shared-secret> node agent/index.mjs` (PORT, DOCKER_SOCKET envs optional).
+- Self-contained, image-free — Pier serves the agent at `/agent.mjs`, so a stock
+  image can fetch it at startup:
+  `docker run -d --name pier-agent --restart unless-stopped -e PIER_KEY=<secret> -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock node:24-alpine sh -c "wget -qO /agent.mjs http://<pier-host>:3000/agent.mjs && exec node /agent.mjs"`
+- Build the image yourself: `docker build -t pier-agent ./agent`
 
 Then in Pier: **Add -> Device**, host = the server's IP (used for endpoint URLs),
 agent URL `http://<ip>:8080`, and the same key. Adding the device scans it immediately.
