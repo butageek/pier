@@ -12,6 +12,12 @@ const DB_PATH = path.join(DATA_DIR, "pier.db");
 const globalForDb = globalThis as unknown as { pierDb?: Database.Database };
 
 function migrate(db: Database.Database) {
+  // Migrate databases created before hidden links existed.
+  const tileCols = db.pragma("table_info(tiles)") as { name: string }[];
+  if (tileCols.length > 0 && !tileCols.some((c) => c.name === "hidden")) {
+    db.exec("ALTER TABLE tiles ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0");
+  }
+
   // Migrate databases from the pre-agent era (direct Docker API devices).
   const cols = db.pragma("table_info(devices)") as { name: string }[];
   if (cols.length > 0 && cols.some((c) => c.name === "docker_url")) {
@@ -53,6 +59,7 @@ function open(): Database.Database {
       container_image TEXT NOT NULL DEFAULT '',
       container_state TEXT NOT NULL DEFAULT '',
       sort_order INTEGER NOT NULL DEFAULT 0,
+      hidden INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE TABLE IF NOT EXISTS devices (

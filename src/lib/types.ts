@@ -14,6 +14,8 @@ export type Tile = {
   container_image: string;
   /** Container running state for auto tiles ("running", "exited", ...). */
   container_state: string;
+  /** 1 = hidden from the dashboard (kept across scans; managed in Settings). */
+  hidden: number;
   sort_order: number;
   created_at: string;
 };

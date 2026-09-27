@@ -12,6 +12,8 @@ no exposed Docker API.
 ## What it does (MVP)
 
 1. **Manual links** — add any link (title, URL, description, group) from the dashboard.
+   Duplicate endpoints for the same container? **Hide** any link from its ⋯ menu —
+   it stays scan-synced but off the dashboard, and Settings lists hidden links to restore.
 2. **Devices with auto-discovery** — run pier-agent on each Docker-enabled server:
    - detects the OS, architecture, kernel, Docker version, CPU count and RAM;
    - shows live CPU / RAM usage (real host stats for the local machine, summed container stats for remotes);

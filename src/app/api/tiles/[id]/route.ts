@@ -26,6 +26,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   for (const key of EDITABLE) {
     if (key in body) updates[key] = String(body[key] ?? "").trim();
   }
+  // hidden is a boolean flag, not a trimmed string.
+  if ("hidden" in body) updates.hidden = body.hidden ? 1 : 0;
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "No editable fields provided" }, { status: 400 });
   }

@@ -31,10 +31,12 @@ export function TileCard({
   tile,
   onEdit,
   onDelete,
+  onHide,
 }: {
   tile: EnrichedTile;
   onEdit: (tile: EnrichedTile) => void;
   onDelete: (tile: EnrichedTile) => void;
+  onHide: (tile: EnrichedTile) => void;
 }) {
   const [imgFailed, setImgFailed] = useState(false);
   const stopped = tile.auto && tile.container_state && tile.container_state !== "running";
@@ -85,6 +87,7 @@ export function TileCard({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-36">
             <DropdownMenuItem onClick={() => onEdit(tile)}>Edit</DropdownMenuItem>
+            {tile.auto && <DropdownMenuItem onClick={() => onHide(tile)}>Hide</DropdownMenuItem>}
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onClick={() => onDelete(tile)}>
               Delete

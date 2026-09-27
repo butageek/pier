@@ -126,6 +126,23 @@ export function Dashboard() {
     [refreshTiles, refreshDevices]
   );
 
+  const hideTile = useCallback(
+    async (tile: EnrichedTile) => {
+      setTiles((prev) => prev?.map((t) => (t.id === tile.id ? { ...t, hidden: 1 } : t)) ?? prev);
+      const res = await fetch(`/api/tiles/${tile.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ hidden: true }),
+      });
+      if (res.ok) toast.success(`Hidden "${tile.title}" — restore it in Settings`);
+      else {
+        toast.error("Failed to hide link");
+        refreshTiles();
+      }
+    },
+    [refreshTiles]
+  );
+
   const deleteTile = useCallback(
     async (tile: EnrichedTile) => {
       setTiles((prev) => prev?.filter((t) => t.id !== tile.id) ?? prev);
@@ -139,7 +156,8 @@ export function Dashboard() {
   );
 
   const groups = tiles ? [...new Set(tiles.filter((t) => !t.auto).map((t) => t.group_name).filter(Boolean))] : [];
-  const grouped = tiles ? groupTiles(tiles) : [];
+  const visible = tiles?.filter((t) => !t.hidden) ?? null;
+  const grouped = visible ? groupTiles(visible) : [];
 
   return (
     <div className="space-y-8 pb-16">
@@ -163,7 +181,7 @@ export function Dashboard() {
       <section aria-label="Links">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-muted-foreground">
-            {tiles ? (tiles.length === 0 ? "Links" : `${tiles.length} links`) : ""}
+            {visible ? (visible.length === 0 ? "Links" : `${visible.length} links`) : ""}
           </h2>
           <div className="flex items-center gap-2">
             <Button
@@ -184,7 +202,7 @@ export function Dashboard() {
               <Skeleton key={i} className="h-[76px] rounded-xl" />
             ))}
           </div>
-        ) : tiles.length === 0 ? (
+        ) : visible !== null && visible.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
             <p className="text-sm font-medium">Nothing here yet</p>
             <p className="max-w-sm text-xs text-muted-foreground">
@@ -221,6 +239,7 @@ export function Dashboard() {
                         setEditOpen(true);
                       }}
                       onDelete={deleteTile}
+                      onHide={hideTile}
                     />
                   ))}
                 </div>
