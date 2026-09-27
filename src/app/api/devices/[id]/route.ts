@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { AgentError, testAgent } from "@/lib/agent";
 import type { Device } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -19,12 +20,24 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const name = "name" in body ? String(body.name ?? "").trim() : device.name;
   const host = "host" in body ? String(body.host ?? "").trim() : device.host;
   const agentUrl = "agent_url" in body ? String(body.agent_url ?? "").trim() : device.agent_url;
-  const agentKey = "agent_key" in body ? String(body.agent_key ?? "").trim() : device.agent_key;
+  // Blank/omitted key means "keep the current one" (keys are never sent to the browser).
+  const keyProvided = "agent_key" in body && String(body.agent_key ?? "").trim().length > 0;
+  const agentKey = keyProvided ? String(body.agent_key).trim() : device.agent_key;
   if (!name || !host || !agentUrl || !agentKey) {
-    return NextResponse.json({ error: "Name, host, agent URL and key are required" }, { status: 400 });
+    return NextResponse.json({ error: "Name, host and agent URL are required" }, { status: 400 });
   }
   if (!/^https?:\/\//.test(agentUrl)) {
     return NextResponse.json({ error: "Agent URL must start with http:// or https://" }, { status: 400 });
+  }
+
+  // If the connection details changed, verify the agent answers before saving.
+  if (agentUrl !== device.agent_url || agentKey !== device.agent_key) {
+    try {
+      await testAgent(agentUrl, agentKey);
+    } catch (err) {
+      const message = err instanceof AgentError ? err.message : "Agent connection test failed";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
   }
 
   db.prepare("UPDATE devices SET name = ?, host = ?, agent_url = ?, agent_key = ? WHERE id = ?").run(

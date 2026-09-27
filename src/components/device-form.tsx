@@ -7,18 +7,35 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import type { SafeDevice } from "@/lib/types";
 
 /**
- * Device form: add a Docker-enabled server running pier-agent, then scan it
- * immediately. The agent reports host stats from /proc and containers (with
- * their published ports) via the local Docker socket — each endpoint becomes
- * a clickable tile.
+ * Device form: add a Docker-enabled server running pier-agent (then scan it
+ * immediately), or edit an existing device's configuration. The agent reports
+ * host stats from /proc and containers (with their published ports) via the
+ * local Docker socket — each endpoint becomes a clickable tile.
  */
-export function DeviceForm({ onDone }: { onDone: () => void }) {
-  const [name, setName] = useState("");
-  const [host, setHost] = useState("");
-  const [agentUrl, setAgentUrl] = useState("");
-  const [agentUrlTouched, setAgentUrlTouched] = useState(false);
+export function DeviceForm({
+  onDone,
+  device,
+}: {
+  onDone: () => void;
+  /** Pass a device to edit it instead of adding a new one. */
+  device?: SafeDevice;
+}) {
+  const editing = !!device;
+  const initialPort = (() => {
+    try {
+      return new URL(device?.agent_url ?? "").port || "8080";
+    } catch {
+      return "8080";
+    }
+  })();
+
+  const [name, setName] = useState(device?.name ?? "");
+  const [host, setHost] = useState(device?.host ?? "");
+  const [agentUrl, setAgentUrl] = useState(device?.agent_url ?? "");
+  const [agentUrlTouched, setAgentUrlTouched] = useState(editing);
   const [agentKey, setAgentKey] = useState("");
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
@@ -26,7 +43,7 @@ export function DeviceForm({ onDone }: { onDone: () => void }) {
 
   const [cmdMode, setCmdMode] = useState<"run" | "compose">("run");
   const [showCmd, setShowCmd] = useState(true);
-  const [port, setPort] = useState("8080");
+  const [port, setPort] = useState(initialPort);
 
   const runCommand = `docker run -d --name pier-agent --restart unless-stopped \\
   -e PIER_KEY=${agentKey || "<key>"} -p ${port || "8080"}:8080 \\
@@ -96,10 +113,35 @@ export function DeviceForm({ onDone }: { onDone: () => void }) {
     setAgentKey(Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join(""));
   };
 
-  async function addDevice() {
+  async function saveDevice() {
     setAdding(true);
     setError("");
     try {
+      if (editing) {
+        const body: Record<string, string> = { name, host, agent_url: agentUrl };
+        if (agentKey.trim()) body.agent_key = agentKey.trim(); // blank = keep current
+        const res = await fetch(`/api/devices/${device.id}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Failed to save device");
+
+        // Host/URL may have changed — rescan so endpoint links follow.
+        let note = "";
+        try {
+          const scanRes = await fetch(`/api/devices/${device.id}/scan`, { method: "POST" });
+          const scan = await scanRes.json();
+          if (scanRes.ok) note = ` — ${scan.containersSeen} containers, +${scan.tilesCreated} links`;
+        } catch {
+          /* best-effort */
+        }
+        toast.success(`Updated ${data.device.name}${note}`);
+        onDone();
+        return;
+      }
+
       const res = await fetch("/api/devices", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -125,11 +167,15 @@ export function DeviceForm({ onDone }: { onDone: () => void }) {
       toast.success(`Added ${data.device.name}${scanNote}`);
       onDone();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to add device");
+      setError(e instanceof Error ? e.message : "Failed to save device");
     } finally {
       setAdding(false);
     }
   }
+
+  const validPort = editing || (/^\d+$/.test(port) && Number(port) > 0 && Number(port) < 65536);
+  const canSubmit =
+    !!name.trim() && !!host.trim() && validPort && !!agentUrl.trim() && (editing || !!agentKey.trim());
 
   return (
     <div className="space-y-4">
@@ -137,7 +183,7 @@ export function DeviceForm({ onDone }: { onDone: () => void }) {
         <Label htmlFor="dev-name">Name</Label>
         <Input id="dev-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="homelab" />
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className={editing ? "grid gap-4" : "grid gap-4 sm:grid-cols-2"}>
         <div className="grid gap-2">
           <Label htmlFor="dev-host">Host / IP</Label>
           <Input
@@ -147,18 +193,20 @@ export function DeviceForm({ onDone }: { onDone: () => void }) {
             placeholder="192.168.1.10"
           />
         </div>
-        <div className="grid gap-2">
-          <Label htmlFor="dev-port">Agent port</Label>
-          <Input
-            id="dev-port"
-            type="number"
-            min={1}
-            max={65535}
-            value={port}
-            onChange={(e) => onPortChange(e.target.value)}
-            placeholder="8080"
-          />
-        </div>
+        {!editing && (
+          <div className="grid gap-2">
+            <Label htmlFor="dev-port">Agent port</Label>
+            <Input
+              id="dev-port"
+              type="number"
+              min={1}
+              max={65535}
+              value={port}
+              onChange={(e) => onPortChange(e.target.value)}
+              placeholder="8080"
+            />
+          </div>
+        )}
       </div>
       <div className="grid gap-2">
         <Label htmlFor="dev-agent-url">Agent URL</Label>
@@ -188,11 +236,12 @@ export function DeviceForm({ onDone }: { onDone: () => void }) {
           id="dev-agent-key"
           value={agentKey}
           onChange={(e) => setAgentKey(e.target.value)}
-          placeholder="must match PIER_KEY on the server"
+          placeholder={editing ? "leave blank to keep the current key" : "must match PIER_KEY on the server"}
           autoComplete="off"
         />
       </div>
 
+      {!editing && (
       <div className="rounded-lg bg-muted/50 text-xs text-muted-foreground">
         <div className="flex items-center gap-2 px-3 py-2">
           <button
@@ -237,6 +286,7 @@ export function DeviceForm({ onDone }: { onDone: () => void }) {
           <pre className="overflow-x-auto px-3 pb-3 text-[11px] leading-relaxed text-foreground">{activeCommand}</pre>
         )}
       </div>
+      )}
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
@@ -244,8 +294,8 @@ export function DeviceForm({ onDone }: { onDone: () => void }) {
         <Button variant="ghost" onClick={onDone}>
           Cancel
         </Button>
-        <Button onClick={addDevice} disabled={adding || !name.trim() || !host.trim() || !agentUrl.trim() || !agentKey.trim()}>
-          {adding ? "Adding & scanning…" : "Add device"}
+        <Button onClick={saveDevice} disabled={adding || !canSubmit}>
+          {adding ? (editing ? "Saving…" : "Adding & scanning…") : editing ? "Save changes" : "Add device"}
         </Button>
       </div>
     </div>

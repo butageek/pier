@@ -33,12 +33,14 @@ export function DeviceCard({
   device,
   status,
   onScan,
+  onEdit,
   onRemove,
   scanning,
 }: {
   device: SafeDevice;
   status: DeviceStatus | null;
   onScan: (device: SafeDevice) => void;
+  onEdit: (device: SafeDevice) => void;
   onRemove: (device: SafeDevice) => void;
   scanning: boolean;
 }) {
@@ -93,6 +95,7 @@ export function DeviceCard({
                 <DropdownMenuItem onClick={() => onScan(device)} disabled={scanning}>
                   Scan now
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onEdit(device)}>Edit</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" onClick={() => onRemove(device)}>
                   Remove

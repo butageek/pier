@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddDialog } from "@/components/add-dialog";
+import { DeviceEditDialog } from "@/components/device-edit-dialog";
 import { DeviceCard } from "@/components/device-card";
 import { TileCard } from "@/components/tile-card";
 import { TileDialog } from "@/components/tile-dialog";
@@ -39,6 +40,8 @@ export function Dashboard() {
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<EnrichedTile | null>(null);
   const [scanningIds, setScanningIds] = useState<Set<number>>(new Set());
+  const [editDeviceOpen, setEditDeviceOpen] = useState(false);
+  const [editingDevice, setEditingDevice] = useState<SafeDevice | null>(null);
 
   const refreshTiles = useCallback(async () => {
     try {
@@ -170,6 +173,10 @@ export function Dashboard() {
                 device={d}
                 status={statuses[d.id] ?? null}
                 onScan={scanDevice}
+                onEdit={(d) => {
+                  setEditingDevice(d);
+                  setEditDeviceOpen(true);
+                }}
                 onRemove={removeDevice}
                 scanning={scanningIds.has(d.id)}
               />
@@ -248,6 +255,22 @@ export function Dashboard() {
           </div>
         )}
       </section>
+
+      {editingDevice && (
+        <DeviceEditDialog
+          key={`edit-${editingDevice.id}`}
+          open={editDeviceOpen}
+          onOpenChange={(open) => {
+            setEditDeviceOpen(open);
+            if (!open) {
+              setEditingDevice(null);
+              refreshDevices();
+              refreshTiles();
+            }
+          }}
+          device={editingDevice}
+        />
+      )}
 
       <AddDialog
         key={addOpen ? `open-${addTab}` : "closed"}
