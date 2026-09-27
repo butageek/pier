@@ -24,13 +24,6 @@ export function DeviceForm({
   device?: SafeDevice;
 }) {
   const editing = !!device;
-  const initialPort = (() => {
-    try {
-      return new URL(device?.agent_url ?? "").port || "8080";
-    } catch {
-      return "8080";
-    }
-  })();
 
   const [name, setName] = useState(device?.name ?? "");
   const [host, setHost] = useState(device?.host ?? "");
@@ -43,7 +36,8 @@ export function DeviceForm({
 
   const [cmdMode, setCmdMode] = useState<"run" | "compose">("run");
   const [showCmd, setShowCmd] = useState(true);
-  const [port, setPort] = useState(initialPort);
+  // Port drives the add-mode snippet/URL sync; editing a device edits its agent URL directly.
+  const [port, setPort] = useState("8080");
 
   const runCommand = `docker run -d --name pier-agent --restart unless-stopped \\
   -e PIER_KEY=${agentKey || "<key>"} -p ${port || "8080"}:8080 \\
@@ -177,6 +171,10 @@ export function DeviceForm({
   const canSubmit =
     !!name.trim() && !!host.trim() && validPort && !!agentUrl.trim() && (editing || !!agentKey.trim());
 
+  let submitLabel: string;
+  if (editing) submitLabel = adding ? "Saving…" : "Save changes";
+  else submitLabel = adding ? "Adding & scanning…" : "Add device";
+
   return (
     <div className="space-y-4">
       <div className="grid gap-2">
@@ -295,7 +293,7 @@ export function DeviceForm({
           Cancel
         </Button>
         <Button onClick={saveDevice} disabled={adding || !canSubmit}>
-          {adding ? (editing ? "Saving…" : "Adding & scanning…") : editing ? "Save changes" : "Add device"}
+          {submitLabel}
         </Button>
       </div>
     </div>

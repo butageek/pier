@@ -25,11 +25,7 @@ export function DeviceEditDialog({
             any host change.
           </DialogDescription>
         </DialogHeader>
-        <DeviceForm
-          key={`edit-device-${device.id}`}
-          device={device}
-          onDone={() => onOpenChange(false)}
-        />
+        <DeviceForm device={device} onDone={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>
   );

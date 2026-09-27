@@ -21,8 +21,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const host = "host" in body ? String(body.host ?? "").trim() : device.host;
   const agentUrl = "agent_url" in body ? String(body.agent_url ?? "").trim() : device.agent_url;
   // Blank/omitted key means "keep the current one" (keys are never sent to the browser).
-  const keyProvided = "agent_key" in body && String(body.agent_key ?? "").trim().length > 0;
-  const agentKey = keyProvided ? String(body.agent_key).trim() : device.agent_key;
+  const providedKey = "agent_key" in body ? String(body.agent_key ?? "").trim() : "";
+  const agentKey = providedKey || device.agent_key;
   if (!name || !host || !agentUrl || !agentKey) {
     return NextResponse.json({ error: "Name, host and agent URL are required" }, { status: 400 });
   }
