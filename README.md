@@ -16,7 +16,8 @@ no exposed Docker API.
    - detects the OS, architecture, kernel, Docker version, CPU count and RAM;
    - shows live CPU / RAM usage (real host stats for the local machine, summed container stats for remotes);
    - lists every running container and **auto-creates a clickable link for each published `ip:port`
-     endpoint** (multi-port containers get one link per port); stopped containers keep their links,
+     endpoint**, detecting `http` vs `https` per endpoint with a TLS probe (self-signed OK);
+     multi-port containers get one link per port; stopped containers keep their links,
      dimmed with their state.
 3. **Automatic icons** — links are matched against
    [dashboard-icons](https://github.com/homarr-labs/dashboard-icons) (PNG set) by container image name,

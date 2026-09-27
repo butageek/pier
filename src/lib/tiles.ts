@@ -1,3 +1,4 @@
+import tls from "node:tls";
 import { getDb } from "./db";
 import { agentContainers, agentInfo } from "./agent";
 import { imageCandidates, resolveIcon, iconUrl } from "./icons";
@@ -55,16 +56,41 @@ export async function getDeviceSnapshot(device: Device): Promise<DeviceSnapshot>
   };
 }
 
-function endpointsFor(c: SnapshotContainer, deviceHost: string): { url: string; port: number }[] {
+/**
+ * Detect whether an endpoint speaks TLS by attempting a handshake.
+ * Self-signed certificates are accepted (rejectUnauthorized: false) — common
+ * on LAN services. Anything that fails/times out is treated as plain HTTP.
+ */
+function detectScheme(host: string, port: number, timeoutMs = 2500): Promise<"https" | "http"> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const done = (scheme: "https" | "http") => {
+      if (!settled) {
+        settled = true;
+        socket.destroy();
+        resolve(scheme);
+      }
+    };
+    const socket = tls.connect({ host, port, rejectUnauthorized: false }, () => done("https"));
+    socket.setTimeout(timeoutMs, () => done("http"));
+    socket.on("error", () => done("http"));
+    socket.on("close", () => done("http"));
+  });
+}
+
+async function endpointsFor(c: SnapshotContainer, deviceHost: string): Promise<{ url: string; port: number }[]> {
   const seen = new Set<number>();
-  const out: { url: string; port: number }[] = [];
+  const raw: { host: string; port: number }[] = [];
   for (const p of c.ports ?? []) {
     if (!p.publicPort || p.type === "udp" || seen.has(p.publicPort)) continue;
     seen.add(p.publicPort);
     const hostIp = p.ip && p.ip !== "0.0.0.0" && p.ip !== "::" ? p.ip : deviceHost;
-    out.push({ url: `http://${hostIp}:${p.publicPort}`, port: p.publicPort });
+    raw.push({ host: hostIp, port: p.publicPort });
   }
-  return out.sort((a, b) => a.port - b.port);
+  const probed = await Promise.all(
+    raw.map(async (r) => ({ url: `${await detectScheme(r.host, r.port)}://${r.host}:${r.port}`, port: r.port }))
+  );
+  return probed.sort((a, b) => a.port - b.port);
 }
 
 /**
@@ -93,11 +119,19 @@ export async function scanDevice(device: Device): Promise<ScanResult> {
     "SELECT id, icon, url, title FROM tiles WHERE device_id = ? AND container_id = ? AND url = ?"
   );
 
-  for (const c of containers) {
+  // Endpoint scheme probes and icon matching are network-bound — run them all
+  // in parallel, then apply DB writes sequentially below.
+  const prepared = await Promise.all(
+    containers.map(async (c) => ({
+      c,
+      endpoints: await endpointsFor(c, device.host),
+      match: await resolveIcon([...imageCandidates(c.image), c.name || c.id.slice(0, 12)]),
+    }))
+  );
+
+  for (const { c, endpoints, match } of prepared) {
     const name = c.name || c.id.slice(0, 12);
-    const endpoints = endpointsFor(c, device.host);
     if (endpoints.length === 0) continue;
-    const match = await resolveIcon([...imageCandidates(c.image), name]);
     const multiPort = endpoints.length > 1;
 
     for (const ep of endpoints) {
