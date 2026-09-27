@@ -29,7 +29,7 @@ PIER_KEY=x node agent/index.mjs   # run the agent standalone (zero deps)
 | --- | --- |
 | `src/app/page.tsx` | dashboard page (all logic in `src/components/dashboard.tsx`, client) |
 | `src/app/api/tiles*` | links CRUD + hide flag (`/api/tiles`, `/api/tiles/[id]`) |
-| `src/app/settings/page.tsx` | Settings — manage hidden links (`hidden-links.tsx`) |
+| `src/app/settings/` | settings hub; sub-pages like `hidden/` manage hidden links |
 | `src/app/api/devices*` | devices CRUD, `[id]/scan`, `[id]/status` (live usage, 15s cache) |
 | `src/app/api/icons` | icon search (`?q=`) and resolve (`?title=&image=&url=` / `?hint=`) |
 | `src/app/agent.mjs/route.ts` | serves `agent/index.mjs` so servers deploy without cloning the repo |

@@ -69,7 +69,7 @@ export function HiddenLinks() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 pb-16">
+    <div>
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-muted-foreground">
