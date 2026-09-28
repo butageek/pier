@@ -1,6 +1,6 @@
 {
   "name": "pier",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -34,7 +34,7 @@
     "tailwindcss": "^4",
     "typescript": "^5"
   },
-  "description": "A dock for your self-hosted services \u2014 dashboard links, agent-based server/Docker discovery, automatic icons",
+  "description": "A dock for your self-hosted services — dashboard links, agent-based server/Docker discovery, automatic icons",
   "license": "MIT",
   "engines": {
     "node": ">=20"
