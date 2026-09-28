@@ -86,6 +86,11 @@ function open(): Database.Database {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_tiles_device_endpoint
       ON tiles(device_id, container_id, url)
       WHERE device_id IS NOT NULL AND container_id IS NOT NULL;
+    -- User-arranged group order (dashboard groups are otherwise alphabetical).
+    CREATE TABLE IF NOT EXISTS tile_groups (
+      name TEXT PRIMARY KEY,
+      position INTEGER NOT NULL DEFAULT 0
+    );
   `);
   migrate(db);
   return db;

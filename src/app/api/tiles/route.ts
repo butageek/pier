@@ -7,10 +7,17 @@ import type { Tile } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const tiles = getDb()
+  const db = getDb();
+  const tiles = db
     .prepare("SELECT * FROM tiles ORDER BY group_name, sort_order, id")
     .all() as Tile[];
-  return NextResponse.json({ tiles: await enrichTiles(tiles) });
+  const groupRows = db
+    .prepare("SELECT name FROM tile_groups ORDER BY position, name")
+    .all() as { name: string }[];
+  return NextResponse.json({
+    tiles: await enrichTiles(tiles),
+    groupOrder: groupRows.map((r) => r.name),
+  });
 }
 
 export async function POST(req: Request) {

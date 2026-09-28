@@ -2,7 +2,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type DragEvent } from "react";
+import { GripVertical } from "lucide-react";
+import { cn } from "cn";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,6 +68,12 @@ export function TileCard({
   onEdit,
   onDelete,
   onHide,
+  reordering = false,
+  isDragging = false,
+  nodeRef,
+  onReorderStart,
+  onReorderOver,
+  onReorderEnd,
 }: {
   tile: EnrichedTile;
   /** Latest reachability probe; undefined until the first check completes. */
@@ -73,43 +81,97 @@ export function TileCard({
   onEdit: (tile: EnrichedTile) => void;
   onDelete: (tile: EnrichedTile) => void;
   onHide: (tile: EnrichedTile) => void;
+  /** Layout-edit mode: the card becomes a drag handle instead of a link. */
+  reordering?: boolean;
+  isDragging?: boolean;
+  /** Registers the card root for FLIP slide animations (see useFlipReorder). */
+  nodeRef?: (el: HTMLDivElement | null) => void;
+  onReorderStart?: (tile: EnrichedTile) => void;
+  /** Fires on dragenter/dragover; `at` is the event's monotonic timeStamp. */
+  onReorderOver?: (tile: EnrichedTile, at: number) => void;
+  onReorderEnd?: () => void;
 }) {
   const [imgFailed, setImgFailed] = useState(false);
   const stopped = tile.auto && tile.container_state && tile.container_state !== "running";
 
-  return (
-    <div className="group relative">
-      <Link
-        href={tile.url}
-        target="_blank"
-        rel="noreferrer"
-        className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-3.5 transition-all hover:-translate-y-0.5 hover:border-cyan-500/40 hover:shadow-lg hover:shadow-cyan-950/30"
-      >
-        <div className="size-11 shrink-0 overflow-hidden rounded-lg">
-          {tile.iconUrl && !imgFailed ? (
-            <img
-              src={tile.iconUrl}
-              alt={tile.title}
-              className="size-full object-contain"
-              loading="lazy"
-              onError={() => setImgFailed(true)}
-            />
-          ) : (
-            <IconPreview url={null} label={tile.title} />
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-medium">{tile.title}</span>
-            <StatusDot tile={tile} health={health} />
-          </div>
-          <div className="truncate text-xs text-muted-foreground">
-            {tile.description || tile.url.replace(/^https?:\/\//, "")}
-          </div>
-        </div>
-      </Link>
+  // dragenter fires on arrival; dragover keeps firing while hovered, resolving
+  // the hover once the swap cooldown ends.
+  const onHoverTarget = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    onReorderOver?.(tile, e.timeStamp);
+  };
 
-      <div className="absolute top-1.5 right-1.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+  const content = (
+    <>
+      <div className="size-11 shrink-0 overflow-hidden rounded-lg">
+        {tile.iconUrl && !imgFailed ? (
+          <img
+            src={tile.iconUrl}
+            alt={tile.title}
+            className="size-full object-contain"
+            loading="lazy"
+            onError={() => setImgFailed(true)}
+          />
+        ) : (
+          <IconPreview url={null} label={tile.title} />
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="truncate text-sm font-medium">{tile.title}</span>
+          <StatusDot tile={tile} health={health} />
+        </div>
+        <div className="truncate text-xs text-muted-foreground">
+          {tile.description || tile.url.replace(/^https?:\/\//, "")}
+        </div>
+      </div>
+    </>
+  );
+
+  return (
+    <div
+      ref={nodeRef}
+      className={cn(
+        "group relative rounded-xl transition-[opacity,transform,scale] duration-200 ease-out",
+        reordering && "cursor-grab select-none active:cursor-grabbing",
+        isDragging && "scale-95 opacity-40"
+      )}
+      draggable={reordering}
+      onDragStart={
+        reordering
+          ? (e) => {
+              e.dataTransfer.effectAllowed = "move";
+              e.dataTransfer.setData("text/plain", String(tile.id)); // Firefox requires data
+              onReorderStart?.(tile);
+            }
+          : undefined
+      }
+      onDragEnter={reordering ? onHoverTarget : undefined}
+      onDragOver={reordering ? onHoverTarget : undefined}
+      onDrop={reordering ? (e) => e.preventDefault() : undefined}
+      onDragEnd={reordering ? () => onReorderEnd?.() : undefined}
+    >
+      {reordering ? (
+        <div
+          title="Drag to reorder"
+          className="flex items-center gap-3 rounded-xl border border-dashed border-border bg-card p-3.5 transition-all"
+        >
+          <GripVertical className="size-4 shrink-0 text-muted-foreground/60" />
+          {content}
+        </div>
+      ) : (
+        <Link
+          href={tile.url}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-3.5 transition-all hover:-translate-y-0.5 hover:border-cyan-500/40 hover:shadow-lg hover:shadow-cyan-950/30"
+        >
+          {content}
+        </Link>
+      )}
+
+      {!reordering && (
+        <div className="absolute top-1.5 right-1.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
         <DropdownMenu>
           <DropdownMenuTrigger
             className="flex size-6 items-center justify-center rounded-md bg-background/80 text-muted-foreground backdrop-blur hover:text-foreground"
@@ -130,7 +192,8 @@ export function TileCard({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
+        </div>
+      )}
 
       {stopped && <div className="pointer-events-none absolute inset-0 rounded-xl bg-background/40" />}
     </div>
