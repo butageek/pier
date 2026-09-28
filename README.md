@@ -2,10 +2,10 @@
 
 A dock for your self-hosted services — a fast, personal dashboard that starts small.
 
-Pier takes the best ideas from [homepage](https://github.com/gethomepage/homepage) (links for your services)
-and [beszel](https://github.com/henrygd/beszel) (a tiny agent per server), strips them down to an MVP:
-a 60-line zero-dependency agent reports real host stats and Docker containers — no SSH tunnels,
-no exposed Docker API.
+Two ideas carry the whole app: **links** — manual tiles for anything you want one
+click away — and **devices** — Docker servers running pier-agent (a zero-dependency Node
+script reporting host stats and containers through the local socket) or a Proxmox VE
+host Pier talks to directly. No SSH tunnels, no exposed Docker API.
 
 ![stack](https://img.shields.io/badge/Next.js-16-black) ![stack](https://img.shields.io/badge/shadcn%2Fui-base--nova) ![stack](https://img.shields.io/badge/Tailwind-v4-38bdf8)
 
@@ -14,17 +14,29 @@ no exposed Docker API.
 1. **Manual links** — add any link (title, URL, description, group) from the dashboard.
    Duplicate endpoints for the same container? **Hide** any link from its ⋯ menu —
    it stays scan-synced but off the dashboard, and Settings lists hidden links to restore.
-2. **Devices with auto-discovery** — run pier-agent on each Docker-enabled server:
-   - detects the OS, architecture, kernel, Docker version, CPU count and RAM;
-   - shows live CPU / RAM usage (real host stats for the local machine, summed container stats for remotes);
-   - lists every running container and **auto-creates a clickable link for each published `ip:port`
-     endpoint**, detecting `http` vs `https` per endpoint with a TLS probe (self-signed OK);
-     multi-port containers get one link per port; stopped containers keep their links,
-     dimmed with their state.
+2. **Devices with auto-discovery** — two kinds:
+   - **Docker servers** — run pier-agent on each one:
+     - detects the OS, architecture, kernel, Docker version, CPU count and RAM;
+     - shows live CPU / RAM usage (real host stats for the local machine, summed container stats for remotes);
+     - lists every running container and **auto-creates a clickable link for each published `ip:port`
+       endpoint**, detecting `http` vs `https` per endpoint with a TLS probe (self-signed OK);
+       multi-port containers get one link per port; stopped containers keep their links,
+       dimmed with their state.
+   - **Proxmox VE** — no agent: Pier talks to the PVE API directly (API token, self-signed certs OK):
+     - the device card shows a PVE-portal-style guest summary — every VM/LXC with state and
+       live CPU/RAM, guest names clickable when a web endpoint was discovered;
+     - running LXCs get direct links to web services found by probing ~30 common self-hosted
+       service ports (80, 443, 3000, 8080, 8443, 8090, 8096, ...) on the guest's IP;
+     - cluster CPU/RAM, PVE version and VM/LXC counts on the card header.
 3. **Automatic icons** — links are matched against
    [dashboard-icons](https://github.com/homarr-labs/dashboard-icons) (PNG set) by container image name,
    link title or hostname, served from the jsDelivr CDN. You can always pick one manually from the
    built-in searchable picker.
+4. **Connectivity pings** — every link (manual or discovered) is probed server-side with a HEAD
+   request; a single status dot on each card combines the picture: green = reachable, amber =
+   container running but its endpoint isn't responding, gray = stopped, red = manual link down.
+   Hover for details (status code, latency). Any HTTP response counts as up — only timeouts and
+   network errors are treated as unreachable.
 
 ## Getting started
 
@@ -56,9 +68,12 @@ pier-agent image to GHCR when `agent/` changes. MIT licensed — see LICENSE.
 
 ## Connecting a device
 
-Devices are Docker-enabled servers, added from the dashboard's **Add -> Device** dialog
+Devices are added from the dashboard's **Add -> Device** dialog
 (they're managed right on their dashboard card: hover the ... menu to scan or remove).
-Every device runs **pier-agent** — a tiny, zero-dependency Node (>= 18) script that
+
+### Docker servers
+
+Every Docker server runs **pier-agent** — a tiny, zero-dependency Node (>= 18) script that
 reports your containers via the local Docker socket plus real host stats from `/proc`.
 Nothing but one authenticated port is exposed: no SSH tunnels, no Docker API on the network.
 
@@ -101,9 +116,43 @@ agent URL `http://<ip>:8080`, and the same key. Adding the device scans it immed
 Want a different port? Set it in the form — the agent URL and the generated deploy
 command both follow (`-p <port>:8080` maps your port to the agent's internal 8080).
 
-Hit **Scan now** (card refresh icon or the ... menu) to refresh: Pier stores the detected
-info, creates/updates/prunes container endpoint links, and the dashboard card polls real
-host CPU/RAM every 15s.
+### Proxmox VE
+
+Nothing runs on the PVE host — Pier uses its API directly:
+
+1. In the PVE web UI, create a user: **Datacenter -> Permissions -> Users -> Add**
+   (e.g. `pier@pve`; the password is never used, make it long and forget it).
+2. Create a token: **Datacenter -> Permissions -> API Tokens -> Add** — user `pier@pve`, ID `pier`,
+   keep **Privilege Separation** on. Copy the `pier@pve!pier=<uuid>` value (shown once).
+3. **Grant PVEAuditor on `/` twice — once to the user, once to the token**
+   (Permissions -> Add -> User Permission *and* Token Permission). PVE 9 computes a
+   privilege-separated token's effective rights as the *intersection* of the two; either half
+   alone sees nothing.
+4. In Pier: **Add -> Device -> Proxmox VE**, host + API port (8006 by default), paste the token.
+
+   The same setup from the PVE shell:
+
+   ```bash
+   pveum user add pier@pve -comment "Pier dashboard (read-only)"
+   pveum user token add pier@pve pier -privsep 1     # prints the UUID -> pier@pve!pier=<uuid>
+   pveum acl modify / -users pier@pve -roles PVEAuditor
+   pveum acl modify / -tokens 'pier@pve!pier' -roles PVEAuditor
+   ```
+
+   Verify with `pveum user token permissions pier@pve!pier` — it must list PVEAuditor on `/`.
+
+> **Token works but the scan finds nothing?** That's PVE's silent permission filtering: the API
+> answers 200 with empty lists instead of an error. It means the intersection is empty — the
+> grant is missing from the user or the token (step 3). Pier detects this case and tells you.
+
+Adding the device scans it immediately: running LXCs are probed on common web ports and each
+open port becomes a direct link into the container. Everything else lives on the device card —
+a PVE-portal-style guest summary (state + live CPU/RAM per VM/LXC, names clickable when a
+discovered link exists), refreshed every 15s along with cluster CPU/RAM.
+
+Both kinds of devices refresh the same way: **Scan now** (card refresh icon or the ...
+menu) stores the detected info, creates/updates/prunes links, and the card polls live
+CPU/RAM every 15s.
 
 ## How it works
 
@@ -112,10 +161,11 @@ agent/index.mjs     zero-dep pier-agent: host facts from /proc, containers via d
                     token-authenticated HTTP (Dockerfile + GHCR workflow included)
 src/app/agent.mjs   serves the agent script so servers can deploy without cloning the repo
 src/lib/agent.ts    client for pier-agent endpoints (info/containers/stats)
+src/lib/proxmox.ts  Proxmox VE API client: token auth, LXC web-port link discovery, live cluster status with per-guest summary
 src/lib/icons.ts    dashboard-icons slug index (GitHub trees API → data/icon-index.json, weekly refresh,
                     bundled seed fallback) + matcher: exact → alias → token → substring
 src/lib/tiles.ts    scan reconcile: upsert links per (device, container, endpoint URL), prune gone ones
-src/app/api/*       REST routes: links CRUD, devices CRUD, scan, live status, icon search/resolve
+src/app/api/*       REST routes: links CRUD, devices CRUD, scan, live status, link health probes, icon search/resolve
 src/components/*    dashboard grid, device cards, unified Add dialog (link/device) + icon picker
 ```
 
@@ -133,5 +183,5 @@ Design choices kept intentionally small for the MVP:
 
 - Background auto-scan interval per device
 - Drag-and-drop link ordering, per-group layouts
-- Ping/health badges on links; per-container CPU/RAM popovers
-- Multi-user/auth, Docker labels as link config hints (homepage-style)
+- Per-container CPU/RAM popovers
+- Multi-user/auth, Docker labels as link config hints

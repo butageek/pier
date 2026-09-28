@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { agentStats, AgentError } from "@/lib/agent";
+import { proxmoxLiveStatus } from "@/lib/proxmox";
 import type { Device, DeviceStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -26,19 +27,10 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   try {
-    const s = await agentStats(device);
-    const info = JSON.parse(device.info || "{}");
-    const status: DeviceStatus = {
-      online: true,
-      source: "agent",
-      cpuPct: s.cpuPct,
-      memBytes: s.memBytes,
-      memLimitBytes: s.memTotalBytes,
-      memPct: s.memTotalBytes ? pct(s.memBytes / s.memTotalBytes) : null,
-      loadAvg: s.loadAvg,
-      uptimeSec: s.uptimeSec,
-      runningContainers: info.containers?.running ?? null,
-    };
+    const status: DeviceStatus =
+      device.type === "proxmox"
+        ? await proxmoxLiveStatus(device)
+        : await dockerLiveStatus(device);
     cache.set(deviceId, { at: Date.now(), status });
     return NextResponse.json(status);
   } catch (err) {
@@ -56,6 +48,22 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     };
     return NextResponse.json(status, { status: 200 });
   }
+}
+
+async function dockerLiveStatus(device: Device): Promise<DeviceStatus> {
+  const s = await agentStats(device);
+  const info = JSON.parse(device.info || "{}");
+  return {
+    online: true,
+    source: "agent",
+    cpuPct: s.cpuPct,
+    memBytes: s.memBytes,
+    memLimitBytes: s.memTotalBytes,
+    memPct: s.memTotalBytes ? pct(s.memBytes / s.memTotalBytes) : null,
+    loadAvg: s.loadAvg,
+    uptimeSec: s.uptimeSec,
+    runningContainers: info.containers?.running ?? null,
+  };
 }
 
 function pct(v: number): number {

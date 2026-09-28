@@ -61,7 +61,7 @@ export async function getDeviceSnapshot(device: Device): Promise<DeviceSnapshot>
  * Self-signed certificates are accepted (rejectUnauthorized: false) — common
  * on LAN services. Anything that fails/times out is treated as plain HTTP.
  */
-function detectScheme(host: string, port: number, timeoutMs = 2500): Promise<"https" | "http"> {
+export function detectScheme(host: string, port: number, timeoutMs = 2500): Promise<"https" | "http"> {
   return new Promise((resolve) => {
     let settled = false;
     const done = (scheme: "https" | "http") => {
@@ -93,19 +93,29 @@ async function endpointsFor(c: SnapshotContainer, deviceHost: string): Promise<{
   return probed.sort((a, b) => a.port - b.port);
 }
 
+/** One auto-discovered endpoint to upsert for a device. */
+export type TileUpsert = {
+  /** Stable per-thing id (Docker container id, "lxc/100", "qemu/101", ...). */
+  containerId: string;
+  url: string;
+  title: string;
+  /** Explicit icon slug for new tiles; an existing user-picked icon always wins. */
+  icon: string;
+  image: string;
+  state: string;
+};
+
 /**
- * Scan a device: detect OS/runtime facts, then reconcile one tile per published
- * container endpoint (upsert by device+container+url, prune endpoints that
- * disappeared). Stopped containers keep their tiles, flagged with their state.
+ * Reconcile auto-discovered tiles for a device: upsert one tile per
+ * (container, url), prune ones whose endpoint disappeared. Shared by the
+ * Docker (pier-agent) and Proxmox scanners.
  */
-export async function scanDevice(device: Device): Promise<ScanResult> {
+export function reconcileTiles(deviceId: number, groupName: string, entries: TileUpsert[]): {
+  created: number;
+  updated: number;
+  removed: number;
+} {
   const db = getDb();
-  const { info, containers } = await getDeviceSnapshot(device);
-
-  let created = 0;
-  let updated = 0;
-  const seenKeys = new Set<string>();
-
   const upsert = db.prepare(`
     INSERT INTO tiles (title, url, group_name, icon, device_id, container_id, container_image, container_state, sort_order)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1000)
@@ -116,8 +126,49 @@ export async function scanDevice(device: Device): Promise<ScanResult> {
       group_name = excluded.group_name
   `);
   const findExisting = db.prepare(
-    "SELECT id, icon, url, title FROM tiles WHERE device_id = ? AND container_id = ? AND url = ?"
+    "SELECT icon FROM tiles WHERE device_id = ? AND container_id = ? AND url = ?"
   );
+
+  let created = 0;
+  let updated = 0;
+  const seenKeys = new Set<string>();
+  for (const e of entries) {
+    seenKeys.add(`${e.containerId}|${e.url}`);
+    const existing = findExisting.get(deviceId, e.containerId, e.url) as { icon: string } | undefined;
+    if (existing) updated++;
+    else created++;
+    upsert.run(e.title, e.url, groupName, existing?.icon || e.icon, deviceId, e.containerId, e.image, e.state);
+  }
+
+  // Prune auto tiles whose endpoint no longer exists on this device.
+  const existingRows = db
+    .prepare("SELECT id, container_id, url FROM tiles WHERE device_id = ?")
+    .all(deviceId) as { id: number; container_id: string | null; url: string }[];
+  const gone = existingRows.filter((r) => r.container_id && !seenKeys.has(`${r.container_id}|${r.url}`));
+  const del = db.prepare("DELETE FROM tiles WHERE id = ?");
+  const removeMany = db.transaction((ids: number[]) => ids.forEach((id) => del.run(id)));
+  removeMany(gone.map((r) => r.id));
+
+  return { created, updated, removed: gone.length };
+}
+
+/** Write scan facts + timestamp back to the device row. */
+export function saveScanInfo(deviceId: number, info: DeviceScanInfo): void {
+  const db = getDb();
+  db.prepare("UPDATE devices SET info = ?, last_scan = ? WHERE id = ?").run(
+    JSON.stringify(info),
+    new Date().toISOString(),
+    deviceId
+  );
+}
+
+/**
+ * Scan a device: detect OS/runtime facts, then reconcile one tile per published
+ * container endpoint (upsert by device+container+url, prune endpoints that
+ * disappeared). Stopped containers keep their tiles, flagged with their state.
+ */
+export async function scanDevice(device: Device): Promise<ScanResult> {
+  const { info, containers } = await getDeviceSnapshot(device);
 
   // Endpoint scheme probes and icon matching are network-bound — run them all
   // in parallel, then apply DB writes sequentially below.
@@ -129,44 +180,29 @@ export async function scanDevice(device: Device): Promise<ScanResult> {
     }))
   );
 
+  const entries: TileUpsert[] = [];
   for (const { c, endpoints, match } of prepared) {
     const name = c.name || c.id.slice(0, 12);
-    if (endpoints.length === 0) continue;
-    const multiPort = endpoints.length > 1;
-
     for (const ep of endpoints) {
-      seenKeys.add(`${c.id}|${ep.url}`);
-      const existing = findExisting.get(device.id, c.id, ep.url) as
-        | { id: number; icon: string; url: string; title: string }
-        | undefined;
-      if (existing) updated++;
-      else created++;
-      const title = multiPort ? `${name}:${ep.port}` : name;
-      upsert.run(title, ep.url, device.name, existing?.icon || match?.slug || "", device.id, c.id, c.image, c.state);
+      entries.push({
+        containerId: c.id,
+        url: ep.url,
+        title: endpoints.length > 1 ? `${name}:${ep.port}` : name,
+        icon: match?.slug ?? "",
+        image: c.image,
+        state: c.state,
+      });
     }
   }
 
-  // Prune auto tiles whose endpoint no longer exists on this device.
-  const existingRows = db
-    .prepare("SELECT id, container_id, url FROM tiles WHERE device_id = ?")
-    .all(device.id) as { id: number; container_id: string | null; url: string }[];
-  const gone = existingRows.filter((r) => r.container_id && !seenKeys.has(`${r.container_id}|${r.url}`));
-  const del = db.prepare("DELETE FROM tiles WHERE id = ?");
-  const removeMany = db.transaction((ids: number[]) => ids.forEach((id) => del.run(id)));
-  removeMany(gone.map((r) => r.id));
-
-  const now = new Date().toISOString();
-  db.prepare("UPDATE devices SET info = ?, last_scan = ? WHERE id = ?").run(
-    JSON.stringify(info),
-    now,
-    device.id
-  );
+  const { created, updated, removed } = reconcileTiles(device.id, device.name, entries);
+  saveScanInfo(device.id, info);
 
   return {
-    info: info as DeviceScanInfo,
+    info,
     containersSeen: containers.length,
     tilesCreated: created,
     tilesUpdated: updated,
-    tilesRemoved: gone.length,
+    tilesRemoved: removed,
   };
 }

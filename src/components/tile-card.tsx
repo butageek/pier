@@ -12,28 +12,64 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { IconPreview } from "@/components/icon-picker";
 import type { EnrichedTile } from "@/lib/tiles";
+import type { TileHealth } from "@/lib/types";
 
-function StateDot({ state }: { state: string }) {
-  const running = state === "running";
-  return (
-    <span
-      title={state}
-      className={
-        running
-          ? "size-2 rounded-full bg-emerald-500 shadow-[0_0_6px] shadow-emerald-500/70"
-          : "size-2 rounded-full bg-zinc-600"
-      }
-    />
-  );
+type DotState = "up" | "warn" | "down" | "idle";
+
+/** Color (and glow) per state — the dot shape lives on the <span>. */
+const DOT_CLASS: Record<DotState, string> = {
+  up: "bg-emerald-500 shadow-[0_0_6px] shadow-emerald-500/70",
+  warn: "bg-amber-500 shadow-[0_0_6px] shadow-amber-500/70",
+  down: "bg-red-500 shadow-[0_0_6px] shadow-red-500/70",
+  idle: "bg-zinc-600",
+};
+
+/**
+ * One status dot per card, combining container state with endpoint reachability.
+ * Containers: green = running + reachable, amber = running but the endpoint
+ * isn't responding, gray = stopped. Manual links: green = reachable,
+ * red = unreachable, gray = checking. Hover spells out the details.
+ */
+function StatusDot({ tile, health }: { tile: EnrichedTile; health?: TileHealth }) {
+  const stopped = tile.auto && !!tile.container_state && tile.container_state !== "running";
+  if (!tile.auto && health === undefined) return null; // nothing probed (e.g. mailto:)
+
+  let state: DotState;
+  let title: string;
+  if (stopped) {
+    state = "idle";
+    title = tile.container_state;
+    if (health) title += health.state === "up" ? " · endpoint still responding" : " · endpoint unreachable";
+  } else if (health === undefined) {
+    state = "idle";
+    title = "Checking reachability…";
+  } else if (health.state === "up") {
+    state = "up";
+    const parts = [...(tile.auto ? ["running"] : []), "reachable"];
+    if (health.code) parts.push(String(health.code));
+    if (health.ms != null) parts.push(`${health.ms}ms`);
+    title = parts.join(" · ");
+  } else if (tile.auto) {
+    state = "warn";
+    title = `running · unreachable · ${health.error ?? "no response"}`;
+  } else {
+    state = "down";
+    title = `unreachable · ${health.error ?? "no response"}`;
+  }
+
+  return <span title={title} className={`size-2 rounded-full ${DOT_CLASS[state]}`} />;
 }
 
 export function TileCard({
   tile,
+  health,
   onEdit,
   onDelete,
   onHide,
 }: {
   tile: EnrichedTile;
+  /** Latest reachability probe; undefined until the first check completes. */
+  health?: TileHealth;
   onEdit: (tile: EnrichedTile) => void;
   onDelete: (tile: EnrichedTile) => void;
   onHide: (tile: EnrichedTile) => void;
@@ -65,7 +101,7 @@ export function TileCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="truncate text-sm font-medium">{tile.title}</span>
-            {tile.auto && tile.container_state && <StateDot state={tile.container_state} />}
+            <StatusDot tile={tile} health={health} />
           </div>
           <div className="truncate text-xs text-muted-foreground">
             {tile.description || tile.url.replace(/^https?:\/\//, "")}

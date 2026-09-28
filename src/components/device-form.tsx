@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronDown, Copy } from "lucide-react";
+import { Check, ChevronDown, Container, Copy, Server } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,11 +9,22 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import type { SafeDevice } from "@/lib/types";
 
+type DeviceKind = "docker" | "proxmox";
+
+/** Per-kind form defaults: agent port + URL scheme. */
+const KIND_DEFAULTS: Record<DeviceKind, { port: string; scheme: string }> = {
+  docker: { port: "8080", scheme: "http" },
+  proxmox: { port: "8006", scheme: "https" },
+};
+
 /**
- * Device form: add a Docker-enabled server running pier-agent (then scan it
- * immediately), or edit an existing device's configuration. The agent reports
- * host stats from /proc and containers (with their published ports) via the
- * local Docker socket — each endpoint becomes a clickable tile.
+ * Device form: add a server to auto-discover links from (then scan it
+ * immediately), or edit an existing device's configuration.
+ *
+ * - Docker: the server runs pier-agent — host stats from /proc and containers
+ *   (with their published ports) via the local Docker socket.
+ * - Proxmox VE: Pier talks to the PVE API directly with an API token; every
+ *   VM/LXC guest becomes a console link, plus web links into running LXCs.
  */
 export function DeviceForm({
   onDone,
@@ -24,9 +35,17 @@ export function DeviceForm({
   device?: SafeDevice;
 }) {
   const editing = !!device;
+  const kind: DeviceKind = device?.type === "proxmox" ? "proxmox" : "docker";
+  const [mode, setMode] = useState<DeviceKind>(kind); // add-mode picker; editing locks kind
+
+  const activeKind = editing ? kind : mode;
+  const pve = activeKind === "proxmox";
+  const { port: defaultPort, scheme } = KIND_DEFAULTS[activeKind];
 
   const [name, setName] = useState(device?.name ?? "");
   const [host, setHost] = useState(device?.host ?? "");
+  const [port, setPort] = useState(editing ? "" : defaultPort);
+  const [portTouched, setPortTouched] = useState(editing);
   const [agentUrl, setAgentUrl] = useState(device?.agent_url ?? "");
   const [agentUrlTouched, setAgentUrlTouched] = useState(editing);
   const [agentKey, setAgentKey] = useState("");
@@ -36,8 +55,7 @@ export function DeviceForm({
 
   const [cmdMode, setCmdMode] = useState<"run" | "compose">("run");
   const [showCmd, setShowCmd] = useState(true);
-  // Port drives the add-mode snippet/URL sync; editing a device edits its agent URL directly.
-  const [port, setPort] = useState("8080");
+  const [showPveHelp, setShowPveHelp] = useState(true);
 
   const runCommand = `docker run -d --name pier-agent --restart unless-stopped \\
   -e PIER_KEY=${agentKey || "<key>"} -p ${port || "8080"}:8080 \\
@@ -88,7 +106,7 @@ export function DeviceForm({
   };
 
   const syncAgentUrl = (h: string, p: string) => {
-    if (!agentUrlTouched) setAgentUrl(h ? `http://${h}:${p || "8080"}` : "");
+    if (!agentUrlTouched) setAgentUrl(h ? `${scheme}://${h}:${p || defaultPort}` : "");
   };
 
   const onHostChange = (value: string) => {
@@ -98,7 +116,17 @@ export function DeviceForm({
 
   const onPortChange = (value: string) => {
     setPort(value);
+    setPortTouched(true);
     syncAgentUrl(host, value);
+  };
+
+  // Switching the device kind re-bases the port + URL unless they were touched.
+  const onKindChange = (next: DeviceKind) => {
+    if (next === mode) return;
+    setMode(next);
+    const { port: nextPort, scheme: nextScheme } = KIND_DEFAULTS[next];
+    if (!portTouched) setPort(nextPort);
+    if (!agentUrlTouched && host) setAgentUrl(`${nextScheme}://${host}:${portTouched ? port : nextPort}`);
   };
 
   const generateKey = () => {
@@ -114,7 +142,7 @@ export function DeviceForm({
       if (editing) {
         const body: Record<string, string> = { name, host, agent_url: agentUrl };
         if (agentKey.trim()) body.agent_key = agentKey.trim(); // blank = keep current
-        const res = await fetch(`/api/devices/${device.id}`, {
+        const res = await fetch(`/api/devices/${device!.id}`, {
           method: "PATCH",
           headers: { "content-type": "application/json" },
           body: JSON.stringify(body),
@@ -125,9 +153,12 @@ export function DeviceForm({
         // Host/URL may have changed — rescan so endpoint links follow.
         let note = "";
         try {
-          const scanRes = await fetch(`/api/devices/${device.id}/scan`, { method: "POST" });
+          const scanRes = await fetch(`/api/devices/${device!.id}/scan`, { method: "POST" });
           const scan = await scanRes.json();
-          if (scanRes.ok) note = ` — ${scan.containersSeen} containers, +${scan.tilesCreated} links`;
+          if (scanRes.ok) {
+            const noun = kind === "proxmox" ? "guests" : "containers";
+            note = ` — ${scan.containersSeen} ${noun}, +${scan.tilesCreated} links`;
+          }
         } catch {
           /* best-effort */
         }
@@ -139,7 +170,7 @@ export function DeviceForm({
       const res = await fetch("/api/devices", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, host, agent_url: agentUrl, agent_key: agentKey }),
+        body: JSON.stringify({ name, host, agent_url: agentUrl, agent_key: agentKey, type: mode }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to add device");
@@ -150,10 +181,11 @@ export function DeviceForm({
         const scanRes = await fetch(`/api/devices/${data.device.id}/scan`, { method: "POST" });
         const scan = await scanRes.json();
         if (scanRes.ok) {
+          const noun = mode === "proxmox" ? "guests" : "containers";
           scanNote =
             scan.containersSeen > 0
-              ? ` — ${scan.containersSeen} containers, +${scan.tilesCreated} tiles`
-              : " — no containers found";
+              ? ` — ${scan.containersSeen} ${noun}, +${scan.tilesCreated} tiles`
+              : " — nothing found";
         }
       } catch {
         /* scan is best-effort; device is saved either way */
@@ -168,15 +200,46 @@ export function DeviceForm({
   }
 
   const validPort = editing || (/^\d+$/.test(port) && Number(port) > 0 && Number(port) < 65536);
-  const canSubmit =
-    !!name.trim() && !!host.trim() && validPort && !!agentUrl.trim() && (editing || !!agentKey.trim());
+  const trimmedKey = agentKey.trim();
+  // PVE tokens look like "user@realm!token=uuid"; agent keys are any shared secret.
+  const validKey = editing || (pve ? trimmedKey.includes("@") && trimmedKey.includes("=") : !!trimmedKey);
+  const canSubmit = !!name.trim() && !!host.trim() && validPort && !!agentUrl.trim() && validKey;
 
   let submitLabel: string;
   if (editing) submitLabel = adding ? "Saving…" : "Save changes";
   else submitLabel = adding ? "Adding & scanning…" : "Add device";
 
+  let keyPlaceholder: string;
+  if (editing) keyPlaceholder = "leave blank to keep the current one";
+  else if (pve) keyPlaceholder = "user@pam!pier=00000000-0000-0000-0000-000000000000";
+  else keyPlaceholder = "must match PIER_KEY on the server";
+
+  const kindButton = (value: DeviceKind, label: string, Icon: typeof Server) => (
+    <button
+      key={value}
+      type="button"
+      onClick={() => onKindChange(value)}
+      aria-pressed={mode === value}
+      className={cn(
+        "flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-colors",
+        mode === value
+          ? "border-cyan-500/50 bg-cyan-500/10 text-foreground"
+          : "border-border text-muted-foreground hover:text-foreground"
+      )}
+    >
+      <Icon className="size-3.5" />
+      {label}
+    </button>
+  );
+
   return (
     <div className="space-y-4">
+      {!editing && (
+        <div className="grid grid-cols-2 gap-2" role="group" aria-label="Device type">
+          {kindButton("docker", "Docker server", Container)}
+          {kindButton("proxmox", "Proxmox VE", Server)}
+        </div>
+      )}
       <div className="grid gap-2">
         <Label htmlFor="dev-name">Name</Label>
         <Input id="dev-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="homelab" />
@@ -193,7 +256,7 @@ export function DeviceForm({
         </div>
         {!editing && (
           <div className="grid gap-2">
-            <Label htmlFor="dev-port">Agent port</Label>
+            <Label htmlFor="dev-port">{pve ? "API port" : "Agent port"}</Label>
             <Input
               id="dev-port"
               type="number"
@@ -201,13 +264,13 @@ export function DeviceForm({
               max={65535}
               value={port}
               onChange={(e) => onPortChange(e.target.value)}
-              placeholder="8080"
+              placeholder={defaultPort}
             />
           </div>
         )}
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="dev-agent-url">Agent URL</Label>
+        <Label htmlFor="dev-agent-url">{pve ? "Proxmox URL" : "Agent URL"}</Label>
         <Input
           id="dev-agent-url"
           value={agentUrl}
@@ -215,75 +278,120 @@ export function DeviceForm({
             setAgentUrlTouched(true);
             setAgentUrl(e.target.value);
           }}
-          placeholder="http://192.168.1.10:8080"
+          placeholder={`${scheme}://192.168.1.10:${defaultPort}`}
         />
       </div>
 
       <div className="grid gap-2">
         <div className="flex items-center justify-between">
-          <Label htmlFor="dev-agent-key">Access key</Label>
-          <button
-            type="button"
-            onClick={generateKey}
-            className="text-xs text-muted-foreground underline hover:text-foreground"
-          >
-            generate
-          </button>
+          <Label htmlFor="dev-agent-key">{pve ? "API token" : "Access key"}</Label>
+          {!pve && (
+            <button
+              type="button"
+              onClick={generateKey}
+              className="text-xs text-muted-foreground underline hover:text-foreground"
+            >
+              generate
+            </button>
+          )}
         </div>
         <Input
           id="dev-agent-key"
           value={agentKey}
           onChange={(e) => setAgentKey(e.target.value)}
-          placeholder={editing ? "leave blank to keep the current key" : "must match PIER_KEY on the server"}
+          placeholder={keyPlaceholder}
           autoComplete="off"
         />
       </div>
 
-      {!editing && (
-      <div className="rounded-lg bg-muted/50 text-xs text-muted-foreground">
-        <div className="flex items-center gap-2 px-3 py-2">
-          <button
-            type="button"
-            onClick={() => setShowCmd((v) => !v)}
-            aria-expanded={showCmd}
-            className="flex min-w-0 flex-1 items-center gap-1 text-left"
-          >
-            <ChevronDown className={cn("size-3.5 shrink-0 transition-transform", showCmd && "rotate-180")} />
-            <span className="truncate">Deploy pier-agent — prebuilt image, just add the socket</span>
-          </button>
-          <div className="flex shrink-0 gap-1">
-            {(["run", "compose"] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => {
-                  setCmdMode(m);
-                  setShowCmd(true);
-                }}
-                className={
-                  m === cmdMode
-                    ? "rounded-md bg-background/80 px-2 py-0.5 text-[10px] font-medium text-foreground backdrop-blur"
-                    : "rounded-md px-2 py-0.5 text-[10px] text-muted-foreground/70 hover:text-foreground"
-                }
-              >
-                {m === "run" ? "docker run" : "compose"}
-              </button>
-            ))}
+      {!editing && pve && (
+        <div className="rounded-lg bg-muted/50 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 px-3 py-2">
+            <button
+              type="button"
+              onClick={() => setShowPveHelp((v) => !v)}
+              aria-expanded={showPveHelp}
+              className="flex min-w-0 flex-1 items-center gap-1 text-left"
+            >
+              <ChevronDown
+                className={cn("size-3.5 shrink-0 transition-transform", showPveHelp && "rotate-180")}
+              />
+              <span className="truncate">Set up API access in PVE — 3 steps</span>
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={copyCommand}
-            aria-label={cmdMode === "run" ? "Copy docker run command" : "Copy compose file"}
-            title={cmdMode === "run" ? "Copy docker run command" : "Copy compose file"}
-            className="flex size-6 shrink-0 items-center justify-center rounded-md border border-border bg-background/80 text-muted-foreground backdrop-blur transition-colors hover:text-foreground"
-          >
-            {copied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
-          </button>
+          {showPveHelp && (
+            <div className="space-y-1.5 px-3 pb-3 leading-relaxed">
+              <p>
+                <strong>1.</strong> Create a user:{" "}
+                <strong>Datacenter → Permissions → Users → Add</strong> (e.g.{" "}
+                <span className="font-mono">pier</span> — the password is never used).
+              </p>
+              <p>
+                <strong>2.</strong> Create a token: <strong>API Tokens → Add</strong> for that user,
+                keep <strong>Privilege Separation</strong> on, and copy the one-time{" "}
+                <span className="font-mono">user@pve!token=uuid</span> value into the field above.
+              </p>
+              <p>
+                <strong>3.</strong> Grant <strong>PVEAuditor</strong> on <span className="font-mono">/</span>{" "}
+                <strong>twice</strong> — Add → <strong>User Permission</strong> <em>and</em> Add →{" "}
+                <strong>Token Permission</strong>. PVE 9 intersects the two: either half alone and the
+                API silently returns empty lists.
+              </p>
+              <p className="pt-1 text-muted-foreground/70">Or from the PVE shell:</p>
+              <pre className="overflow-x-auto rounded-md bg-background/80 p-2 text-[10px] leading-relaxed text-foreground backdrop-blur">{`pveum user add pier@pve
+pveum user token add pier@pve pier -privsep 1
+pveum acl modify / -users pier@pve -roles PVEAuditor
+pveum acl modify / -tokens 'pier@pve!pier' -roles PVEAuditor`}</pre>
+            </div>
+          )}
         </div>
-        {showCmd && (
-          <pre className="overflow-x-auto px-3 pb-3 text-[11px] leading-relaxed text-foreground">{activeCommand}</pre>
-        )}
-      </div>
+      )}
+
+      {!editing && !pve && (
+        <div className="rounded-lg bg-muted/50 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 px-3 py-2">
+            <button
+              type="button"
+              onClick={() => setShowCmd((v) => !v)}
+              aria-expanded={showCmd}
+              className="flex min-w-0 flex-1 items-center gap-1 text-left"
+            >
+              <ChevronDown className={cn("size-3.5 shrink-0 transition-transform", showCmd && "rotate-180")} />
+              <span className="truncate">Deploy pier-agent — prebuilt image, just add the socket</span>
+            </button>
+            <div className="flex shrink-0 gap-1">
+              {(["run", "compose"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => {
+                    setCmdMode(m);
+                    setShowCmd(true);
+                  }}
+                  className={
+                    m === cmdMode
+                      ? "rounded-md bg-background/80 px-2 py-0.5 text-[10px] font-medium text-foreground backdrop-blur"
+                      : "rounded-md px-2 py-0.5 text-[10px] text-muted-foreground/70 hover:text-foreground"
+                  }
+                >
+                  {m === "run" ? "docker run" : "compose"}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={copyCommand}
+              aria-label={cmdMode === "run" ? "Copy docker run command" : "Copy compose file"}
+              title={cmdMode === "run" ? "Copy docker run command" : "Copy compose file"}
+              className="flex size-6 shrink-0 items-center justify-center rounded-md border border-border bg-background/80 text-muted-foreground backdrop-blur transition-colors hover:text-foreground"
+            >
+              {copied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
+            </button>
+          </div>
+          {showCmd && (
+            <pre className="overflow-x-auto px-3 pb-3 text-[11px] leading-relaxed text-foreground">{activeCommand}</pre>
+          )}
+        </div>
       )}
 
       {error && <p className="text-sm text-destructive">{error}</p>}

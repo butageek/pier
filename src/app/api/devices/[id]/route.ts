@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { AgentError, testAgent } from "@/lib/agent";
+import { testProxmox } from "@/lib/proxmox";
 import type { Device } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -30,12 +31,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     return NextResponse.json({ error: "Agent URL must start with http:// or https://" }, { status: 400 });
   }
 
-  // If the connection details changed, verify the agent answers before saving.
+  // If the connection details changed, verify the endpoint answers before saving.
   if (agentUrl !== device.agent_url || agentKey !== device.agent_key) {
     try {
-      await testAgent(agentUrl, agentKey);
+      if (device.type === "proxmox") await testProxmox(agentUrl, agentKey);
+      else await testAgent(agentUrl, agentKey);
     } catch (err) {
-      const message = err instanceof AgentError ? err.message : "Agent connection test failed";
+      const message = err instanceof AgentError ? err.message : "Connection test failed";
       return NextResponse.json({ error: message }, { status: 400 });
     }
   }

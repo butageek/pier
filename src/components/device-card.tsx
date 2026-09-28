@@ -1,6 +1,7 @@
 "use client";
 
-import { Server, Cpu, Container, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { Server, Cpu, Container, Boxes, Monitor, RefreshCw, ArrowUpRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatBytes, formatUptime, osLabel, timeAgo } from "@/lib/format";
-import type { DeviceScanInfo, DeviceStatus, SafeDevice } from "@/lib/types";
+import type { DeviceScanInfo, DeviceStatus, PveGuestStatus, SafeDevice } from "@/lib/types";
 
 function Bar({ pct, label }: { pct: number | null; label: string }) {
   const v = pct == null ? 0 : Math.min(pct, 100);
@@ -29,9 +30,92 @@ function Bar({ pct, label }: { pct: number | null; label: string }) {
   );
 }
 
+/** Guests shown inline before the "+N more" expander. */
+const GUESTS_INLINE = 5;
+
+/** One guest row on a Proxmox card: type icon, name, state, live CPU/RAM. */
+function GuestRow({
+  guest,
+  href,
+}: {
+  guest: PveGuestStatus;
+  /** Discovered web endpoint for this guest (if any) — makes the name clickable. */
+  href?: string;
+}) {
+  const running = guest.status === "running";
+  const title = running
+    ? `CPU ${guest.cpuPct ?? "—"}% · RAM ${formatBytes(guest.memBytes)} / ${formatBytes(guest.memMaxBytes)} · up ${formatUptime(guest.uptimeSec)}`
+    : guest.status;
+  return (
+    <div className="flex items-center gap-2 text-xs" title={title}>
+      {guest.type === "lxc" ? (
+        <Container className="size-3 shrink-0 text-muted-foreground" />
+      ) : (
+        <Monitor className="size-3 shrink-0 text-muted-foreground" />
+      )}
+      {href ? (
+        <a
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex min-w-0 items-center gap-1 font-medium text-cyan-600 hover:underline dark:text-cyan-400"
+        >
+          <span className="truncate">{guest.name}</span>
+          <ArrowUpRight className="size-3 shrink-0" aria-hidden />
+        </a>
+      ) : (
+        <span className="truncate">{guest.name}</span>
+      )}
+      <span className="ml-auto flex shrink-0 items-center gap-1.5">
+        {running ? (
+          <>
+            <span className="size-1.5 rounded-full bg-emerald-500" aria-label="running" />
+            <span className="tabular-nums text-muted-foreground">
+              {guest.cpuPct ?? "—"}% · {guest.memPct ?? "—"}%
+            </span>
+          </>
+        ) : (
+          <span className="text-muted-foreground/70">{guest.status}</span>
+        )}
+      </span>
+    </div>
+  );
+}
+
+/** Collapsible guest list — capped inline so the card stays close to its neighbors' height. */
+function GuestList({
+  guests,
+  deviceId,
+  guestLinks,
+}: {
+  guests: PveGuestStatus[];
+  deviceId: number;
+  guestLinks?: Record<string, string>;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? guests : guests.slice(0, GUESTS_INLINE);
+  return (
+    <div className="mt-3 space-y-1 border-t border-border/70 pt-2.5">
+      {visible.map((g) => (
+        <GuestRow key={g.id} guest={g} href={guestLinks?.[`${deviceId}|${g.id}`]} />
+      ))}
+      {guests.length > GUESTS_INLINE && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+        >
+          {expanded ? "show less" : `+${guests.length - GUESTS_INLINE} more guests`}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function DeviceCard({
   device,
   status,
+  guestLinks,
   onScan,
   onEdit,
   onRemove,
@@ -39,12 +123,15 @@ export function DeviceCard({
 }: {
   device: SafeDevice;
   status: DeviceStatus | null;
+  /** Proxmox only: "deviceId|guestId" -> discovered web URL, for clickable guest names. */
+  guestLinks?: Record<string, string>;
   onScan: (device: SafeDevice) => void;
   onEdit: (device: SafeDevice) => void;
   onRemove: (device: SafeDevice) => void;
   scanning: boolean;
 }) {
   const info = JSON.parse(device.info || "{}") as DeviceScanInfo;
+  const isPve = device.type === "proxmox";
   const online = status?.online ?? true;
   const hasDocker = info.dockerVersion != null;
   const memPct =
@@ -60,13 +147,23 @@ export function DeviceCard({
             <Server className="size-4 shrink-0 text-cyan-400" />
             <span className="truncate text-sm font-semibold">{device.name}</span>
             <Badge variant={online ? "secondary" : "destructive"} className="px-1.5 text-[10px]">
-              {online ? "agent" : "offline"}
+              {online ? (isPve ? "pve" : "agent") : "offline"}
             </Badge>
           </div>
           <p className="mt-0.5 truncate text-xs text-muted-foreground">
-            {osLabel(info.os, info.osType)}
-            {info.dockerVersion ? ` · Docker ${info.dockerVersion}` : " · no docker"} ·{" "}
-            <span>{device.host}</span>
+            {isPve ? (
+              <>
+                Proxmox VE{info.pveVersion ? ` ${info.pveVersion}` : ""}
+                {info.guests ? ` · ${info.guests.vms} VMs · ${info.guests.lxc} LXC` : ""} ·{" "}
+                <span>{device.host}</span>
+              </>
+            ) : (
+              <>
+                {osLabel(info.os, info.osType)}
+                {info.dockerVersion ? ` · Docker ${info.dockerVersion}` : " · no docker"} ·{" "}
+                <span>{device.host}</span>
+              </>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-0.5">
@@ -114,13 +211,17 @@ export function DeviceCard({
         />
       </div>
 
+      {isPve && status?.guests && status.guests.length > 0 && (
+        <GuestList guests={status.guests} deviceId={device.id} guestLinks={guestLinks} />
+      )}
+
       <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1">
           <Cpu className="size-3" /> {info.cpuCount ?? "?"} cores
         </span>
-        {hasDocker && (
+        {(hasDocker || info.containers) && (
           <span className="inline-flex items-center gap-1">
-            <Container className="size-3" />
+            {isPve ? <Boxes className="size-3" /> : <Container className="size-3" />}
             {running ?? 0} running
             {info.containers?.stopped ? ` / ${info.containers.stopped} stopped` : ""}
           </span>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { AgentError } from "@/lib/agent";
+import { scanProxmoxDevice } from "@/lib/proxmox";
 import { scanDevice } from "@/lib/tiles";
 import type { Device } from "@/lib/types";
 
@@ -15,7 +16,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   if (!device) return NextResponse.json({ error: "Device not found" }, { status: 404 });
 
   try {
-    const result = await scanDevice(device);
+    const result = device.type === "proxmox" ? await scanProxmoxDevice(device) : await scanDevice(device);
     return NextResponse.json(result);
   } catch (err) {
     const message = err instanceof AgentError ? err.message : "Scan failed";

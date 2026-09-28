@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -11,10 +11,11 @@ import { DeviceCard } from "@/components/device-card";
 import { TileCard } from "@/components/tile-card";
 import { TileDialog } from "@/components/tile-dialog";
 import type { EnrichedTile } from "@/lib/tiles";
-import type { DeviceStatus, SafeDevice } from "@/lib/types";
+import type { DeviceStatus, SafeDevice, TileHealth } from "@/lib/types";
 
 type TilesResponse = { tiles: EnrichedTile[] };
 type DevicesResponse = { devices: SafeDevice[] };
+type HealthResponse = { health: Record<number, TileHealth> };
 
 function groupTiles(tiles: EnrichedTile[]): [string, EnrichedTile[]][] {
   const map = new Map<string, EnrichedTile[]>();
@@ -35,6 +36,7 @@ export function Dashboard() {
   const [tiles, setTiles] = useState<EnrichedTile[] | null>(null);
   const [devices, setDevices] = useState<SafeDevice[]>([]);
   const [statuses, setStatuses] = useState<Record<number, DeviceStatus>>({});
+  const [health, setHealth] = useState<Record<number, TileHealth>>({});
   const [addOpen, setAddOpen] = useState(false);
   const [addTab, setAddTab] = useState<"link" | "device">("link");
   const [editOpen, setEditOpen] = useState(false);
@@ -43,15 +45,26 @@ export function Dashboard() {
   const [editDeviceOpen, setEditDeviceOpen] = useState(false);
   const [editingDevice, setEditingDevice] = useState<SafeDevice | null>(null);
 
+  const refreshHealth = useCallback(async () => {
+    try {
+      const res = await fetch("/api/health");
+      const data = (await res.json()) as HealthResponse;
+      setHealth(data.health);
+    } catch {
+      /* transient */
+    }
+  }, []);
+
   const refreshTiles = useCallback(async () => {
     try {
       const res = await fetch("/api/tiles");
       const data = (await res.json()) as TilesResponse;
       setTiles(data.tiles);
+      refreshHealth(); // probe newly added/changed links right away
     } catch {
       /* transient */
     }
-  }, []);
+  }, [refreshHealth]);
 
   const refreshStatuses = useCallback(async (devs: SafeDevice[]) => {
     const entries = await Promise.allSettled(
@@ -84,9 +97,11 @@ export function Dashboard() {
     refreshTiles();
     refreshDevices();
     const tilesTimer = setInterval(refreshTiles, 60_000);
+    const healthTimer = setInterval(refreshHealth, 30_000);
     const statusTimer = setInterval(() => refreshStatuses(devices), 15_000);
     return () => {
       clearInterval(tilesTimer);
+      clearInterval(healthTimer);
       clearInterval(statusTimer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -99,8 +114,9 @@ export function Dashboard() {
         const res = await fetch(`/api/devices/${device.id}/scan`, { method: "POST" });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? "Scan failed");
+        const noun = device.type === "proxmox" ? "guests" : "containers";
         toast.success(`Scanned ${device.name}`, {
-          description: `${data.containersSeen} containers · +${data.tilesCreated} new links, ~${data.tilesRemoved} removed`,
+          description: `${data.containersSeen} ${noun} · +${data.tilesCreated} new links, ~${data.tilesRemoved} removed`,
         });
         await Promise.all([refreshTiles(), refreshDevices()]);
       } catch (e) {
@@ -161,17 +177,29 @@ export function Dashboard() {
   const groups = tiles ? [...new Set(tiles.filter((t) => !t.auto).map((t) => t.group_name).filter(Boolean))] : [];
   const visible = tiles?.filter((t) => !t.hidden) ?? null;
   const grouped = visible ? groupTiles(visible) : [];
+  // "deviceId|guestId" -> first discovered URL: makes Proxmox guest names clickable.
+  const guestLinks = useMemo(() => {
+    const links: Record<string, string> = {};
+    for (const t of tiles ?? []) {
+      if (t.device_id != null && t.container_id) {
+        const key = `${t.device_id}|${t.container_id}`;
+        if (!links[key]) links[key] = t.url;
+      }
+    }
+    return links;
+  }, [tiles]);
 
   return (
     <div className="space-y-8 pb-16">
       {devices.length > 0 && (
         <section aria-label="Devices">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {devices.map((d) => (
               <DeviceCard
                 key={d.id}
                 device={d}
                 status={statuses[d.id] ?? null}
+                guestLinks={guestLinks}
                 onScan={scanDevice}
                 onEdit={(d) => {
                   setEditingDevice(d);
@@ -229,7 +257,7 @@ export function Dashboard() {
           </div>
         ) : (
           <div className="space-y-6">
-            {grouped.map(([group, groupTiles]) => (
+            {grouped.map(([group, items]) => (
               <div key={group || "_ungrouped"}>
                 {group && (
                   <h3 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
@@ -237,10 +265,11 @@ export function Dashboard() {
                   </h3>
                 )}
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {groupTiles.map((t) => (
+                  {items.map((t) => (
                     <TileCard
                       key={t.id}
                       tile={t}
+                      health={health[t.id]}
                       onEdit={(tile) => {
                         setEditing(tile);
                         setEditOpen(true);

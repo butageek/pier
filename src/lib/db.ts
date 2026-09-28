@@ -11,11 +11,20 @@ const DB_PATH = path.join(DATA_DIR, "pier.db");
 
 const globalForDb = globalThis as unknown as { pierDb?: Database.Database };
 
+/** True if `table` already has `column` — the guard behind each guarded migration. */
+function columnExists(db: Database.Database, table: string, column: string): boolean {
+  return (db.pragma(`table_info(${table})`) as { name: string }[]).some((c) => c.name === column);
+}
+
 function migrate(db: Database.Database) {
   // Migrate databases created before hidden links existed.
-  const tileCols = db.pragma("table_info(tiles)") as { name: string }[];
-  if (tileCols.length > 0 && !tileCols.some((c) => c.name === "hidden")) {
+  if (!columnExists(db, "tiles", "hidden")) {
     db.exec("ALTER TABLE tiles ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0");
+  }
+
+  // Migrate databases created before Proxmox devices existed (all devices were docker).
+  if (!columnExists(db, "devices", "type")) {
+    db.exec("ALTER TABLE devices ADD COLUMN type TEXT NOT NULL DEFAULT 'docker'");
   }
 
   // Migrate databases from the pre-agent era (direct Docker API devices).
@@ -29,6 +38,7 @@ function migrate(db: Database.Database) {
         host TEXT NOT NULL,
         agent_url TEXT NOT NULL DEFAULT '',
         agent_key TEXT NOT NULL DEFAULT '',
+        type TEXT NOT NULL DEFAULT 'docker',
         info TEXT NOT NULL DEFAULT '{}',
         last_scan TEXT,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -68,6 +78,7 @@ function open(): Database.Database {
       host TEXT NOT NULL,
       agent_url TEXT NOT NULL DEFAULT '',
       agent_key TEXT NOT NULL DEFAULT '',
+      type TEXT NOT NULL DEFAULT 'docker',
       info TEXT NOT NULL DEFAULT '{}',
       last_scan TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))

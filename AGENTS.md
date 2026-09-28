@@ -7,9 +7,13 @@ Guidance for AI coding agents working in this repo.
 A single-page, self-hosted dashboard — "a dock for your services". Two concepts:
 
 - **Links** — manual tiles (title/URL/description/group) shown on the dashboard.
-- **Devices** — Docker-enabled servers running **pier-agent**, a zero-dependency
+- **Devices** — servers you want links auto-discovered from, two kinds:
+  Docker-enabled servers running **pier-agent**, a zero-dependency
   Node script reporting host stats from `/proc` and containers via the local
-  Docker socket. Every published container endpoint becomes an auto-discovered link.
+  Docker socket (every published container endpoint becomes an auto-discovered
+  link), and **Proxmox VE** hosts talked to directly via the PVE API
+  (`src/lib/proxmox.ts`) — guests summarized on the device card, LXC web
+  endpoints become auto-discovered links.
 
 Stack: Next.js 16 (App Router) · React 19 · shadcn/ui **base-nova** (on
 @base-ui/react) · Tailwind v4 · better-sqlite3 · Node >= 20.
@@ -31,11 +35,13 @@ PIER_KEY=x node agent/index.mjs   # run the agent standalone (zero deps)
 | `src/app/api/tiles*` | links CRUD + hide flag (`/api/tiles`, `/api/tiles/[id]`) |
 | `src/app/settings/` | settings hub — sections list (left) + detail panel (right), no sub-pages |
 | `src/app/api/devices*` | devices CRUD (PATCH: blank key = keep), `[id]/scan`, `[id]/status` (live usage, 15s cache) |
+| `src/app/api/health` | link reachability probes (server-side HEAD, 60s cache) |
 | `src/app/api/icons` | icon search (`?q=`) and resolve (`?title=&image=&url=` / `?hint=`) |
 | `src/app/agent.mjs/route.ts` | serves `agent/index.mjs` so servers deploy without cloning the repo |
 | `src/lib/db.ts` | SQLite singleton (`getDb()`) + guarded migrations; DB at `data/pier.db` |
 | `src/lib/agent.ts` | client for pier-agent endpoints (info/containers/stats) |
-| `src/lib/tiles.ts` | scan reconcile: upsert links per (device, container, URL), prune gone ones |
+| `src/lib/proxmox.ts` | Proxmox VE API client (token auth, self-signed OK) + PVE scan/live-status (per-guest summary) |
+| `src/lib/tiles.ts` | scan reconcile shared by docker + proxmox scanners: upsert links per (device, container, URL), prune gone ones |
 | `src/lib/icons.ts` | dashboard-icons slug index (disk-cached, weekly refresh) + matcher |
 | `src/components/*` | dashboard, device card/form, add dialog, tile card/form, icon + group pickers |
 | `agent/index.mjs` | the whole agent: token auth, `/info` `/containers` `/stats` `/health` |
@@ -53,6 +59,10 @@ PIER_KEY=x node agent/index.mjs   # run the agent standalone (zero deps)
 - **DB**: access only via `getDb()`; schema changes go in `open()`/`migrate()`
   in `src/lib/db.ts` with column-existence guards (no migration framework).
 - **Docker**: only the agent talks to a Docker daemon; Pier never does.
+- **Proxmox**: PVE 9 privilege-separated tokens get the *intersection* of user and token
+  permissions — a PVEAuditor grant must exist on `/` for BOTH `pier@pve` and `pier@pve!pier`,
+  otherwise the API returns empty lists (200) instead of an error. `scanProxmoxDevice`
+  detects the nodes-only visibility and throws `NO_AUDIT` with a fix hint.
 - **Icons**: matched server-side in `resolveIcon` (exact → alias → token →
   substring, min length 4), served from the jsDelivr CDN — never downloaded into the repo.
 - **React 19 effects**: don't guard setState with a `mounted` ref — StrictMode's
