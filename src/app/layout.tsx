@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import Link from "next/link";
 import { Toaster } from "@/components/ui/sonner";
+import { Logo } from "@/components/logo";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -20,10 +21,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur">
           <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
-            <Link href="/" className="flex items-center gap-2.5">
-              <span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-sky-600 text-sm font-bold text-black">
-                P
-              </span>
+            <Link href="/" className="flex items-center gap-2.5" aria-label="Pier home">
+              <Logo className="size-7 shrink-0" />
               <span className="text-[15px] font-semibold tracking-tight">Pier</span>
             </Link>
             <nav className="flex items-center gap-1 text-sm">
