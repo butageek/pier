@@ -49,6 +49,10 @@ export function DeviceForm({
   const [agentUrl, setAgentUrl] = useState(device?.agent_url ?? "");
   const [agentUrlTouched, setAgentUrlTouched] = useState(editing);
   const [agentKey, setAgentKey] = useState("");
+  // Proxmox: the token is entered as its two PVE-dialog pieces and joined on
+  // submit — a full "user@pve!token=uuid" pasted into the ID field also works.
+  const [tokenId, setTokenId] = useState("");
+  const [tokenSecret, setTokenSecret] = useState("");
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -141,7 +145,8 @@ export function DeviceForm({
     try {
       if (editing) {
         const body: Record<string, string> = { name, host, agent_url: agentUrl };
-        if (agentKey.trim()) body.agent_key = agentKey.trim(); // blank = keep current
+        const nextKey = pve ? pveToken : agentKey.trim();
+        if (nextKey) body.agent_key = nextKey; // blank = keep current
         const res = await fetch(`/api/devices/${device!.id}`, {
           method: "PATCH",
           headers: { "content-type": "application/json" },
@@ -170,7 +175,7 @@ export function DeviceForm({
       const res = await fetch("/api/devices", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, host, agent_url: agentUrl, agent_key: agentKey, type: mode }),
+        body: JSON.stringify({ name, host, agent_url: agentUrl, agent_key: pveToken || agentKey, type: mode }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to add device");
@@ -201,18 +206,24 @@ export function DeviceForm({
 
   const validPort = editing || (/^\d+$/.test(port) && Number(port) > 0 && Number(port) < 65536);
   const trimmedKey = agentKey.trim();
-  // PVE tokens look like "user@realm!token=uuid"; agent keys are any shared secret.
-  const validKey = editing || (pve ? trimmedKey.includes("@") && trimmedKey.includes("=") : !!trimmedKey);
+  const trimmedTokenId = tokenId.trim();
+  const trimmedSecret = tokenSecret.trim();
+  let pveToken = "";
+  if (trimmedTokenId.includes("=")) {
+    pveToken = trimmedTokenId; // a full user@pve!token=uuid was pasted into the ID field
+  } else if (trimmedTokenId && trimmedSecret) {
+    pveToken = `${trimmedTokenId}=${trimmedSecret}`;
+  }
+  // Agent keys are any shared secret; PVE tokens must be complete after joining.
+  const validPveToken = pveToken.includes("@") && pveToken.includes("!") && pveToken.includes("=");
+  const validKey = editing || (pve ? validPveToken : !!trimmedKey);
   const canSubmit = !!name.trim() && !!host.trim() && validPort && !!agentUrl.trim() && validKey;
 
   let submitLabel: string;
   if (editing) submitLabel = adding ? "Saving…" : "Save changes";
   else submitLabel = adding ? "Adding & scanning…" : "Add device";
 
-  let keyPlaceholder: string;
-  if (editing) keyPlaceholder = "leave blank to keep the current one";
-  else if (pve) keyPlaceholder = "user@pam!pier=00000000-0000-0000-0000-000000000000";
-  else keyPlaceholder = "must match PIER_KEY on the server";
+  const keyPlaceholder = editing ? "leave blank to keep the current one" : "must match PIER_KEY on the server";
 
   const kindButton = (value: DeviceKind, label: string, Icon: typeof Server) => (
     <button
@@ -282,10 +293,33 @@ export function DeviceForm({
         />
       </div>
 
-      <div className="grid gap-2">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="dev-agent-key">{pve ? "API token" : "Access key"}</Label>
-          {!pve && (
+      {pve ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-2">
+            <Label htmlFor="dev-token-id">Token ID</Label>
+            <Input
+              id="dev-token-id"
+              value={tokenId}
+              onChange={(e) => setTokenId(e.target.value)}
+              placeholder={editing ? "leave blank to keep" : "pier@pve!pier"}
+              autoComplete="off"
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="dev-token-secret">Token secret</Label>
+            <Input
+              id="dev-token-secret"
+              value={tokenSecret}
+              onChange={(e) => setTokenSecret(e.target.value)}
+              placeholder={editing ? "leave blank to keep" : "00000000-0000-0000-0000-000000000000"}
+              autoComplete="off"
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="grid gap-2">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="dev-agent-key">Access key</Label>
             <button
               type="button"
               onClick={generateKey}
@@ -293,16 +327,16 @@ export function DeviceForm({
             >
               generate
             </button>
-          )}
+          </div>
+          <Input
+            id="dev-agent-key"
+            value={agentKey}
+            onChange={(e) => setAgentKey(e.target.value)}
+            placeholder={keyPlaceholder}
+            autoComplete="off"
+          />
         </div>
-        <Input
-          id="dev-agent-key"
-          value={agentKey}
-          onChange={(e) => setAgentKey(e.target.value)}
-          placeholder={keyPlaceholder}
-          autoComplete="off"
-        />
-      </div>
+      )}
 
       {!editing && pve && (
         <div className="rounded-lg bg-muted/50 text-xs text-muted-foreground">
@@ -328,20 +362,21 @@ export function DeviceForm({
               </p>
               <p>
                 <strong>2.</strong> Create a token: <strong>API Tokens → Add</strong> for that user,
-                keep <strong>Privilege Separation</strong> on, and copy the one-time{" "}
-                <span className="font-mono">user@pve!token=uuid</span> value into the field above.
+                with <strong>Separate privileges unchecked</strong> — the token then inherits the
+                user&apos;s (read-only) access. Copy the <span className="font-mono">Token ID</span> and{" "}
+                <span className="font-mono">Secret</span> from the dialog into the two fields above;
+                Pier joins them for you.
               </p>
               <p>
-                <strong>3.</strong> Grant <strong>PVEAuditor</strong> on <span className="font-mono">/</span>{" "}
-                <strong>twice</strong> — Add → <strong>User Permission</strong> <em>and</em> Add →{" "}
-                <strong>Token Permission</strong>. PVE 9 intersects the two: either half alone and the
-                API silently returns empty lists.
+                <strong>3.</strong> Grant <strong>PVEAuditor</strong> on <span className="font-mono">/</span> to
+                the user: Add → <strong>User Permission</strong>. Prefer a privilege-separated token
+                anyway? Grant it to the <strong>token</strong> too — PVE intersects the two, and either
+                half alone silently returns empty lists.
               </p>
               <p className="pt-1 text-muted-foreground/70">Or from the PVE shell:</p>
               <pre className="overflow-x-auto rounded-md bg-background/80 p-2 text-[10px] leading-relaxed text-foreground backdrop-blur">{`pveum user add pier@pve
-pveum user token add pier@pve pier -privsep 1
-pveum acl modify / -users pier@pve -roles PVEAuditor
-pveum acl modify / -tokens 'pier@pve!pier' -roles PVEAuditor`}</pre>
+pveum user token add pier@pve pier -privsep 0
+pveum acl modify / -users pier@pve -roles PVEAuditor`}</pre>
             </div>
           )}
         </div>

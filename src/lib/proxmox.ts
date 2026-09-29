@@ -209,9 +209,9 @@ export async function scanProxmoxDevice(device: Device): Promise<ScanResult> {
     const all = await pveGet<{ type: string }[]>(device, "/api2/json/cluster/resources");
     if ((all ?? []).length <= online.length) {
       throw new AgentError(
-        "Token works but sees no guests. In PVE 9 a privilege-separated token gets the " +
-          "INTERSECTION of user and token permissions — grant PVEAuditor on / to BOTH " +
-          "pier@<realm> and its token (Datacenter → Permissions → Add)",
+        "Token works but sees no guests. Grant PVEAuditor on / to the token's user — and, " +
+          "for a privilege-separated token, to the token as well (PVE intersects the two; " +
+          "either half alone silently returns empty lists)",
         "NO_AUDIT"
       );
     }

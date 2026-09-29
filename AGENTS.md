@@ -78,10 +78,12 @@ PIER_KEY=x node agent/index.mjs   # run the agent standalone (zero deps)
   IF NOT EXISTS`. No migration framework — when changing columns, re-add a
   `migrate()` with `columnExists`-style guards in `src/lib/db.ts`.
 - **Docker**: only the agent talks to a Docker daemon; Pier never does.
-- **Proxmox**: PVE 9 privilege-separated tokens get the *intersection* of user and token
-  permissions — a PVEAuditor grant must exist on `/` for BOTH `pier@pve` and `pier@pve!pier`,
-  otherwise the API returns empty lists (200) instead of an error. `scanProxmoxDevice`
-  detects the nodes-only visibility and throws `NO_AUDIT` with a fix hint.
+- **Proxmox**: PVE API tokens default to privilege separation — the token's
+  effective rights are the *intersection* of the user's and the token's, so a
+  privsep token needs the grant on BOTH (a missing half returns empty lists,
+  200, not an error; `scanProxmoxDevice` detects it and throws `NO_AUDIT`).
+  Pier's form recommends the simpler path: dedicated read-only user + token
+  with separation OFF (one grant, token inherits PVEAuditor).
 - **Icons**: matched server-side in `resolveIcon` (exact → alias → token →
   substring, min length 4), served from the jsDelivr CDN — never downloaded into the repo.
 - **React 19 effects**: don't guard setState with a `mounted` ref — StrictMode's
