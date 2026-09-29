@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { agentStats, AgentError } from "@/lib/agent";
+import { agentContainers, agentStats, AgentError } from "@/lib/agent";
 import { proxmoxLiveStatus } from "@/lib/proxmox";
 import type { Device, DeviceStatus } from "@/lib/types";
 
@@ -51,7 +51,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 }
 
 async function dockerLiveStatus(device: Device): Promise<DeviceStatus> {
-  const s = await agentStats(device);
+  const [s, containers] = await Promise.all([agentStats(device), agentContainers(device)]);
   const info = JSON.parse(device.info || "{}");
   return {
     online: true,
@@ -63,6 +63,14 @@ async function dockerLiveStatus(device: Device): Promise<DeviceStatus> {
     loadAvg: s.loadAvg,
     uptimeSec: s.uptimeSec,
     runningContainers: info.containers?.running ?? null,
+    // For the card popup: running first, then alphabetical.
+    containers: containers
+      .map((c) => ({ id: c.id, name: c.name, image: c.image, state: c.state }))
+      .sort(
+        (a, b) =>
+          Number(b.state === "running") - Number(a.state === "running") ||
+          a.name.localeCompare(b.name)
+      ),
   };
 }
 

@@ -58,6 +58,15 @@ export type DeviceScanInfo = {
 /** Device as exposed to the browser (agent key stripped). */
 export type SafeDevice = Omit<Device, "agent_key">;
 
+/** One Docker container as listed in the device card popup (live state). */
+export type ContainerStatus = {
+  id: string;
+  name: string;
+  image: string;
+  /** Docker container state: "running", "exited", ... */
+  state: string;
+};
+
 /** Live resource usage for a device. */
 export type DeviceStatus = {
   online: boolean;
@@ -70,6 +79,8 @@ export type DeviceStatus = {
   loadAvg: number[] | null;
   uptimeSec: number | null;
   runningContainers: number | null;
+  /** Docker only: containers for the card popup (running first). */
+  containers?: ContainerStatus[];
   /** Proxmox only: live per-guest stats from /cluster/resources. */
   guests?: PveGuestStatus[];
 };

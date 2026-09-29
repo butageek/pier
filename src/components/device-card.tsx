@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Server, Cpu, Container, Boxes, Monitor, RefreshCw, ArrowUpRight, GripVertical } from "lucide-react";
 import { cn } from "cn";
@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatBytes, formatUptime, osLabel, timeAgo } from "@/lib/format";
-import type { DeviceScanInfo, DeviceStatus, PveGuestStatus, SafeDevice } from "@/lib/types";
+import type { ContainerStatus, DeviceScanInfo, DeviceStatus, PveGuestStatus, SafeDevice } from "@/lib/types";
 
 function Bar({ pct, label }: { pct: number | null; label: string }) {
   const v = pct == null ? 0 : Math.min(pct, 100);
@@ -35,21 +35,30 @@ function Bar({ pct, label }: { pct: number | null; label: string }) {
 /** Popup width in px — kept in sync with the w-72 class below. */
 const POPUP_WIDTH = 288;
 
+/** "N running / M stopped" label for a Docker container list. */
+function containerSummary(containers: ContainerStatus[]): string {
+  const runningN = containers.filter((c) => c.state === "running").length;
+  const stoppedN = containers.length - runningN;
+  return `${runningN} running${stoppedN ? ` / ${stoppedN} stopped` : ""}`;
+}
+
 /**
- * Proxmox guests on the device card: a compact "N guests" trigger that opens
- * a cursor-following popup listing every VM/LXC with live CPU/RAM. Hover to
- * peek (the popup tracks the mouse and stays open while hovered, so the guest
- * links inside stay clickable); click or tap to pin it under the trigger;
- * Esc or an outside click closes it.
+ * A compact footer chip that opens a cursor-following popup. Hover to peek
+ * (the popup tracks the mouse and stays open while hovered, so links inside
+ * stay clickable); click or tap to pin it under the trigger; Esc or an
+ * outside click closes it. Used for Proxmox guests and Docker containers.
  */
-function GuestPopup({
-  guests,
-  deviceId,
-  guestLinks,
+function CursorPopup({
+  label,
+  icon,
+  title,
+  children,
 }: {
-  guests: PveGuestStatus[];
-  deviceId: number;
-  guestLinks?: Record<string, string>;
+  label: string;
+  icon: ReactNode;
+  /** Popup heading, also the trigger's tooltip. */
+  title: string;
+  children: ReactNode;
 }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
@@ -102,7 +111,7 @@ function GuestPopup({
         type="button"
         aria-haspopup="dialog"
         aria-expanded={pinned || pos != null}
-        title="VMs & containers"
+        title={title}
         className="inline-flex cursor-help items-center gap-1 underline decoration-dotted underline-offset-4"
         onMouseEnter={cancelHide}
         onMouseMove={
@@ -127,8 +136,8 @@ function GuestPopup({
           }
         }}
       >
-        <Boxes className="size-3" />
-        {guests.length} guests
+        {icon}
+        {label}
       </button>
 
       {(pinned || pos != null) &&
@@ -137,12 +146,13 @@ function GuestPopup({
             ref={popupRef}
             onMouseEnter={cancelHide}
             onMouseLeave={scheduleHide}
-            className="fixed z-50 max-h-80 w-72 animate-in fade-in-0 zoom-in-95 space-y-1 overflow-y-auto rounded-lg border border-border bg-popover p-2 text-popover-foreground shadow-xl duration-100"
+            className="fixed z-50 max-h-80 w-72 animate-in fade-in-0 zoom-in-95 overflow-y-auto rounded-lg border border-border bg-popover p-2 text-popover-foreground shadow-xl duration-100"
             style={{ left, top }}
           >
-            {guests.map((g) => (
-              <GuestRow key={g.id} guest={g} href={guestLinks?.[`${deviceId}|${g.id}`]} />
-            ))}
+            <p className="mb-1.5 px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              {title}
+            </p>
+            <div className="space-y-1">{children}</div>
           </div>,
           document.body
         )}
@@ -198,6 +208,36 @@ function GuestRow({
     </div>
   );
 }
+/** One container row in the Docker device popup: state dot, name (clickable
+ *  when an endpoint was discovered), image on the right. */
+function ContainerRow({ container, href }: { container: ContainerStatus; href?: string }) {
+  const running = container.state === "running";
+  return (
+    <div className="flex items-center gap-2 text-xs" title={`${container.image} · ${container.state}`}>
+      <span
+        className={`size-1.5 shrink-0 rounded-full ${running ? "bg-emerald-500" : "bg-zinc-600"}`}
+        aria-label={container.state}
+      />
+      {href ? (
+        <a
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex min-w-0 items-center gap-1 font-medium text-cyan-600 hover:underline dark:text-cyan-400"
+        >
+          <span className="truncate">{container.name}</span>
+          <ArrowUpRight className="size-3 shrink-0" aria-hidden />
+        </a>
+      ) : (
+        <span className="truncate">{container.name}</span>
+      )}
+      <span className="ml-auto max-w-32 shrink-0 truncate text-muted-foreground">
+        {container.image.split("/").pop()}
+      </span>
+    </div>
+  );
+}
+
 export function DeviceCard({
   device,
   status,
@@ -356,7 +396,31 @@ export function DeviceCard({
               <Boxes className="size-3" /> {status.guests.length} guests
             </span>
           ) : (
-            <GuestPopup guests={status.guests} deviceId={device.id} guestLinks={guestLinks} />
+            <CursorPopup
+              label={`${status.guests.length} guests`}
+              icon={<Boxes className="size-3" />}
+              title="VMs & containers"
+            >
+              {status.guests.map((g) => (
+                <GuestRow key={g.id} guest={g} href={guestLinks?.[`${device.id}|${g.id}`]} />
+              ))}
+            </CursorPopup>
+          )
+        ) : status?.containers && status.containers.length > 0 ? (
+          reordering ? (
+            <span className="inline-flex items-center gap-1">
+              <Container className="size-3" /> {containerSummary(status.containers)}
+            </span>
+          ) : (
+            <CursorPopup
+              label={containerSummary(status.containers)}
+              icon={<Container className="size-3" />}
+              title="Containers"
+            >
+              {status.containers.map((c) => (
+                <ContainerRow key={c.id} container={c} href={guestLinks?.[`${device.id}|${c.id}`]} />
+              ))}
+            </CursorPopup>
           )
         ) : (
           (hasDocker || info.containers) && (
