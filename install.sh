@@ -57,11 +57,11 @@ mkdir -p "$stage"
 # Bundle a Node runtime when the system doesn't provide a suitable one.
 if [ -z "$NODE_BIN" ] && [ ! -x "$PIER_DIR/node/bin/node" ]; then
   log "downloading Node.js (linux-$arch-$libc) into $PIER_DIR/node"
-  fname=$(curl -fsSL "https://nodejs.org/dist/latest-v22.x/" \
+  fname=$(curl -fsSL "https://nodejs.org/dist/latest-v24.x/" \
     | grep -o "node-v2[0-9.]*-linux-$arch$libc_suffix\.tar\.gz" | head -n 1) || true
   [ -n "$fname" ] || die "no official Node.js build for $arch/$libc — install Node >= 20 with your package manager (e.g. apk add nodejs npm) and re-run"
   mkdir -p "$stage/node"
-  curl -fL "https://nodejs.org/dist/latest-v22.x/$fname" | tar -xz --strip-components=1 -C "$stage/node"
+  curl -fL "https://nodejs.org/dist/latest-v24.x/$fname" | tar -xz --strip-components=1 -C "$stage/node"
 fi
 
 # --- fetch the source ------------------------------------------------------------
