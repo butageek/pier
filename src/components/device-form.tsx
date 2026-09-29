@@ -356,11 +356,11 @@ export function DeviceForm({
           {showPveHelp && (
             <div className="space-y-1.5 px-3 pb-3 leading-relaxed">
               <p>
-                <strong>1.</strong> Create a user: <strong>Datacenter → Permissions → Users →
-                Add</strong> with realm <strong>Proxmox VE authentication server</strong> (e.g.{" "}
-                <span className="font-mono">pier</span>). The password is required but never used —
-                Pier authenticates with the token only. (The default <em>Linux PAM</em> realm is for
-                host system accounts; skip it.)
+                <strong>1.</strong> Create a user: <strong>Datacenter → Permissions → Users → Add</strong> with{" "}
+                realm <strong>Proxmox VE authentication server</strong> (e.g.{" "}
+                <span className="font-mono">pier</span>). The password is required but never used — Pier{" "}
+                authenticates with the token only. (The default <em>Linux PAM</em> realm is for host{" "}
+                system accounts; skip it.)
               </p>
               <p>
                 <strong>2.</strong> Create a token: <strong>API Tokens → Add</strong> for that user,
