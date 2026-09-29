@@ -37,6 +37,10 @@ host Pier talks to directly. No SSH tunnels, no exposed Docker API.
    container running but its endpoint isn't responding, gray = stopped, red = manual link down.
    Hover for details (status code, latency). Any HTTP response counts as up — only timeouts and
    network errors are treated as unreachable.
+5. **Editable layout** — hit *Edit layout* and drag to rearrange: links within their group,
+   the groups themselves, and the device cards. Cards slide aside with a live preview as you
+   drag; **Done** keeps the arrangement, **Cancel** restores what you started with. Everything
+   persists across reloads, rescans and reboots.
 
 ## Getting started
 
@@ -101,8 +105,10 @@ npm run dev   # dashboard at http://localhost:3000
 npm run lint && npm run build
 ```
 
-CI (`.github/workflows/`) runs lint + build on every push and publishes the
-pier-agent image to GHCR when `agent/` changes. MIT licensed — see LICENSE.
+CI (`.github/workflows/`) runs lint + build on every push, publishes the
+pier-agent image to GHCR, and attaches a prebuilt `pier-standalone.tar.gz`
+bundle to every release (that's what makes the one-liner fast). MIT licensed —
+see LICENSE.
 
 ## Connecting a device
 
@@ -123,7 +129,7 @@ docker run -d --name pier-agent --restart unless-stopped \
   ghcr.io/butageek/pier-agent
 ```
 
-The image is rebuilt by CI whenever `agent/` changes. The Add-dialog snippet has
+The image is rebuilt by CI on every push. The Add-dialog snippet has
 this command ready-made with your key and port embedded, plus a compose variant:
 
 ```yaml

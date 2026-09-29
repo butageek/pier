@@ -11,53 +11,6 @@ const DB_PATH = path.join(DATA_DIR, "pier.db");
 
 const globalForDb = globalThis as unknown as { pierDb?: Database.Database };
 
-/** True if `table` already has `column` — the guard behind each guarded migration. */
-function columnExists(db: Database.Database, table: string, column: string): boolean {
-  return (db.pragma(`table_info(${table})`) as { name: string }[]).some((c) => c.name === column);
-}
-
-function migrate(db: Database.Database) {
-  // Migrate databases created before hidden links existed.
-  if (!columnExists(db, "tiles", "hidden")) {
-    db.exec("ALTER TABLE tiles ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0");
-  }
-
-  // Migrate databases created before Proxmox devices existed (all devices were docker).
-  if (!columnExists(db, "devices", "type")) {
-    db.exec("ALTER TABLE devices ADD COLUMN type TEXT NOT NULL DEFAULT 'docker'");
-  }
-
-  // Migrate databases from the pre-agent era (direct Docker API devices).
-  const cols = db.pragma("table_info(devices)") as { name: string }[];
-  if (cols.length > 0 && cols.some((c) => c.name === "docker_url")) {
-    db.exec("ALTER TABLE tiles DROP INDEX IF EXISTS idx_tiles_device_endpoint");
-    db.exec(`
-      CREATE TABLE devices_new (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        host TEXT NOT NULL,
-        agent_url TEXT NOT NULL DEFAULT '',
-        agent_key TEXT NOT NULL DEFAULT '',
-        type TEXT NOT NULL DEFAULT 'docker',
-        info TEXT NOT NULL DEFAULT '{}',
-        last_scan TEXT,
-        created_at TEXT NOT NULL DEFAULT (datetime('now'))
-      );
-      INSERT INTO devices_new (id, name, host, agent_url, agent_key, info, last_scan, created_at)
-        SELECT id, name, host, COALESCE(agent_url, ''), COALESCE(agent_key, ''), info, last_scan, created_at
-        FROM devices;
-      DROP TABLE devices;
-      ALTER TABLE devices_new RENAME TO devices;
-    `);
-  }
-
-  // Migrate databases created before user-arranged device order existed.
-  // (Must run after the pre-agent recreation above, which rebuilds `devices`.)
-  if (!columnExists(db, "devices", "position")) {
-    db.exec("ALTER TABLE devices ADD COLUMN position INTEGER NOT NULL DEFAULT 0");
-  }
-}
-
 function open(): Database.Database {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   const db = new Database(DB_PATH);
@@ -99,7 +52,6 @@ function open(): Database.Database {
       position INTEGER NOT NULL DEFAULT 0
     );
   `);
-  migrate(db);
   return db;
 }
 
