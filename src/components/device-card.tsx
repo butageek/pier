@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Server, Cpu, Container, Boxes, Monitor, RefreshCw, ArrowUpRight } from "lucide-react";
+import { useState, type DragEvent } from "react";
+import { Server, Cpu, Container, Boxes, Monitor, RefreshCw, ArrowUpRight, GripVertical } from "lucide-react";
+import { cn } from "cn";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -120,6 +121,12 @@ export function DeviceCard({
   onEdit,
   onRemove,
   scanning,
+  reordering = false,
+  isDragging = false,
+  nodeRef,
+  onReorderStart,
+  onReorderOver,
+  onReorderEnd,
 }: {
   device: SafeDevice;
   status: DeviceStatus | null;
@@ -129,6 +136,15 @@ export function DeviceCard({
   onEdit: (device: SafeDevice) => void;
   onRemove: (device: SafeDevice) => void;
   scanning: boolean;
+  /** Layout-edit mode: the card becomes a drag handle (actions hidden). */
+  reordering?: boolean;
+  isDragging?: boolean;
+  /** Registers the card root for FLIP slide animations (see useFlipReorder). */
+  nodeRef?: (el: HTMLDivElement | null) => void;
+  onReorderStart?: (device: SafeDevice) => void;
+  /** Fires on dragenter/dragover; `at` is the event's monotonic timeStamp. */
+  onReorderOver?: (device: SafeDevice, at: number) => void;
+  onReorderEnd?: () => void;
 }) {
   const info = JSON.parse(device.info || "{}") as DeviceScanInfo;
   const isPve = device.type === "proxmox";
@@ -139,11 +155,43 @@ export function DeviceCard({
     (info.memTotalBytes && status?.memBytes ? (status.memBytes / info.memTotalBytes) * 100 : null);
   const running = status?.runningContainers ?? info.containers?.running ?? null;
 
+  // dragenter fires on arrival; dragover keeps firing while hovered, resolving
+  // the hover once the swap cooldown ends.
+  const onHoverTarget = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    onReorderOver?.(device, e.timeStamp);
+  };
+
   return (
-    <div className="group relative rounded-xl border border-border/70 bg-card p-4">
+    <div
+      ref={nodeRef}
+      title={reordering ? "Drag to reorder" : undefined}
+      className={cn(
+        "group relative rounded-xl border bg-card p-4 transition-[opacity,transform,scale] duration-200 ease-out",
+        reordering
+          ? "cursor-grab border-dashed border-border select-none active:cursor-grabbing"
+          : "border-border/70",
+        isDragging && "scale-95 opacity-40"
+      )}
+      draggable={reordering}
+      onDragStart={
+        reordering
+          ? (e) => {
+              e.dataTransfer.effectAllowed = "move";
+              e.dataTransfer.setData("text/plain", String(device.id)); // Firefox requires data
+              onReorderStart?.(device);
+            }
+          : undefined
+      }
+      onDragEnter={reordering ? onHoverTarget : undefined}
+      onDragOver={reordering ? onHoverTarget : undefined}
+      onDrop={reordering ? (e) => e.preventDefault() : undefined}
+      onDragEnd={reordering ? () => onReorderEnd?.() : undefined}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
+            {reordering && <GripVertical className="size-3.5 shrink-0 text-muted-foreground/60" />}
             <Server className="size-4 shrink-0 text-cyan-400" />
             <span className="truncate text-sm font-semibold">{device.name}</span>
             <Badge variant={online ? "secondary" : "destructive"} className="px-1.5 text-[10px]">
@@ -166,41 +214,43 @@ export function DeviceCard({
             )}
           </p>
         </div>
-        <div className="flex items-center gap-0.5">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            title={`Scanned ${timeAgo(device.last_scan)}`}
-            onClick={() => onScan(device)}
-            disabled={scanning}
-          >
-            <RefreshCw className={`size-3.5 ${scanning ? "animate-spin" : ""}`} />
-          </Button>
-          <div className="opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
-                aria-label="Device actions"
-              >
-                <svg viewBox="0 0 24 24" className="size-4" fill="currentColor">
-                  <circle cx="12" cy="5" r="1.6" />
-                  <circle cx="12" cy="12" r="1.6" />
-                  <circle cx="12" cy="19" r="1.6" />
-                </svg>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-36">
-                <DropdownMenuItem onClick={() => onScan(device)} disabled={scanning}>
-                  Scan now
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onEdit(device)}>Edit</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" onClick={() => onRemove(device)}>
-                  Remove
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+        {!reordering && (
+          <div className="flex items-center gap-0.5">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              title={`Scanned ${timeAgo(device.last_scan)}`}
+              onClick={() => onScan(device)}
+              disabled={scanning}
+            >
+              <RefreshCw className={`size-3.5 ${scanning ? "animate-spin" : ""}`} />
+            </Button>
+            <div className="opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
+                  aria-label="Device actions"
+                >
+                  <svg viewBox="0 0 24 24" className="size-4" fill="currentColor">
+                    <circle cx="12" cy="5" r="1.6" />
+                    <circle cx="12" cy="12" r="1.6" />
+                    <circle cx="12" cy="19" r="1.6" />
+                  </svg>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-36">
+                  <DropdownMenuItem onClick={() => onScan(device)} disabled={scanning}>
+                    Scan now
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onEdit(device)}>Edit</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onClick={() => onRemove(device)}>
+                    Remove
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="mt-3 space-y-2.5">
@@ -212,7 +262,11 @@ export function DeviceCard({
       </div>
 
       {isPve && status?.guests && status.guests.length > 0 && (
-        <GuestList guests={status.guests} deviceId={device.id} guestLinks={guestLinks} />
+        <GuestList
+          guests={status.guests}
+          deviceId={device.id}
+          guestLinks={reordering ? undefined : guestLinks}
+        />
       )}
 
       <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">

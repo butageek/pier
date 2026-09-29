@@ -44,6 +44,12 @@ export async function PUT(req: Request) {
         seen.add(name);
         upsert.run(name, i);
       }
+      // The array is the complete order: forget saved groups no longer in it
+      // (an empty array resets groups to alphabetical).
+      const placeholders = [...seen].map(() => "?").join(", ");
+      db.prepare(
+        seen.size ? `DELETE FROM tile_groups WHERE name NOT IN (${placeholders})` : "DELETE FROM tile_groups"
+      ).run(...seen);
     }
   })();
 

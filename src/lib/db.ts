@@ -50,6 +50,12 @@ function migrate(db: Database.Database) {
       ALTER TABLE devices_new RENAME TO devices;
     `);
   }
+
+  // Migrate databases created before user-arranged device order existed.
+  // (Must run after the pre-agent recreation above, which rebuilds `devices`.)
+  if (!columnExists(db, "devices", "position")) {
+    db.exec("ALTER TABLE devices ADD COLUMN position INTEGER NOT NULL DEFAULT 0");
+  }
 }
 
 function open(): Database.Database {
@@ -81,6 +87,7 @@ function open(): Database.Database {
       type TEXT NOT NULL DEFAULT 'docker',
       info TEXT NOT NULL DEFAULT '{}',
       last_scan TEXT,
+      position INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE UNIQUE INDEX IF NOT EXISTS idx_tiles_device_endpoint

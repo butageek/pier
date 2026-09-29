@@ -48,6 +48,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               </Link>
             </nav>
           </div>
+          {/* Second header row for page-level actions: Pier's dashboard
+              portal-renders Add / layout-edit controls here, right-aligned
+              under Settings. Empty on pages without actions. */}
+          <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+            <span id="header-actions" className="flex flex-wrap items-center justify-end gap-2 pb-2 empty:hidden" />
+          </div>
         </header>
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">{children}</main>
         <Toaster richColors position="bottom-right" />

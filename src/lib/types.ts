@@ -35,6 +35,8 @@ export type Device = {
   /** Cached scan result (DeviceScanInfo as JSON). */
   info: string;
   last_scan: string | null;
+  /** User-arranged order on the dashboard (lower first; ties by id). */
+  position: number;
   created_at: string;
 };
 

@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
-import { Check, GripVertical, PencilLine, Plus } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type DragEvent } from "react";
+import { createPortal } from "react-dom";
+import { Check, GripVertical, PencilLine, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,31 @@ import type { DeviceStatus, SafeDevice, TileHealth } from "@/lib/types";
 type TilesResponse = { tiles: EnrichedTile[]; groupOrder?: string[] };
 type DevicesResponse = { devices: SafeDevice[] };
 type HealthResponse = { health: Record<number, TileHealth> };
+
+/** Never subscribes — see the hydration check below. */
+const noopSubscribe = () => () => {};
+
+// Must stay ≥ the FLIP slide duration in useFlipReorder: while a displaced tile
+// is still sliding, its transformed box can sweep across the cursor and re-fire
+// dragenter, which would swap the pair back and forth forever. Compared against
+// the drag event's monotonic timeStamp, not the wall clock.
+const SWAP_COOLDOWN_MS = 220;
+
+/** Move the item at `from` to index `to` — lands after the target when
+ *  dragging forward, before it when dragging back. */
+function moveItem<T>(items: readonly T[], from: number, to: number): T[] {
+  const next = items.slice();
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved);
+  return next;
+}
+
+/** Sort `items` into the given id order; ids not listed (added while editing,
+ *  e.g. via a scan) keep their relative order, falling to the end. */
+function restoreOrder<T>(items: T[], order: number[], idOf: (item: T) => number): T[] {
+  const rank = new Map(order.map((id, i) => [id, i] as [number, number]));
+  return items.slice().sort((a, b) => (rank.get(idOf(a)) ?? Infinity) - (rank.get(idOf(b)) ?? Infinity));
+}
 
 function groupTiles(tiles: EnrichedTile[], order?: string[]): [string, EnrichedTile[]][] {
   const map = new Map<string, EnrichedTile[]>();
@@ -39,6 +65,11 @@ function groupTiles(tiles: EnrichedTile[], order?: string[]): [string, EnrichedT
 }
 
 export function Dashboard() {
+  // False while hydrating, true afterwards — portals into the SSR-rendered
+  // site header must wait for hydration, else the client tree mismatches
+  // the server HTML and React remounts the whole page.
+  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
+
   const [tiles, setTiles] = useState<EnrichedTile[] | null>(null);
   const [devices, setDevices] = useState<SafeDevice[]>([]);
   const [statuses, setStatuses] = useState<Record<number, DeviceStatus>>({});
@@ -54,19 +85,30 @@ export function Dashboard() {
   const [groupOrder, setGroupOrder] = useState<string[]>([]);
   const [dragTileId, setDragTileId] = useState<number | null>(null);
   const [dragGroup, setDragGroup] = useState<string | null>(null);
+  const [dragDeviceId, setDragDeviceId] = useState<number | null>(null);
   const dragTileRef = useRef<number | null>(null);
   const dragGroupRef = useRef<string | null>(null);
+  const dragDeviceRef = useRef<number | null>(null);
   const tileOrderDirty = useRef(false);
   const groupOrderDirty = useRef(false);
+  const deviceOrderDirty = useRef(false);
+  // Order as persisted when layout editing started — Cancel's restore point.
+  const layoutSnapshotRef = useRef<{ tileIds: number[]; groups: string[]; deviceIds: number[] } | null>(null);
   // Latest-value refs, updated synchronously by every mutation below — drag
   // handlers read these so a drop immediately after a move can't act on a
   // stale render closure (all of a drag's events can fire within one task).
   const tilesRef = useRef<EnrichedTile[] | null>(null);
   const groupOrderRef = useRef<string[]>([]);
+  const devicesRef = useRef<SafeDevice[]>([]);
 
   const applyTiles = useCallback((next: EnrichedTile[] | null) => {
     tilesRef.current = next;
     setTiles(next);
+  }, []);
+
+  const applyDevices = useCallback((next: SafeDevice[]) => {
+    devicesRef.current = next;
+    setDevices(next);
   }, []);
 
   // Same ref+state pairing for group order, so drag handlers always read the
@@ -79,6 +121,7 @@ export function Dashboard() {
   // FLIP slide animations while a drag is live-previewing a new layout.
   const tileNodes = useFlipReorder<number>(dragTileId != null, (id) => id === dragTileId);
   const groupNodes = useFlipReorder<string>(dragGroup != null, (name) => name === dragGroup);
+  const deviceNodes = useFlipReorder<number>(dragDeviceId != null, (id) => id === dragDeviceId);
 
   const refreshHealth = useCallback(async () => {
     try {
@@ -120,12 +163,12 @@ export function Dashboard() {
     try {
       const res = await fetch("/api/devices");
       const data = (await res.json()) as DevicesResponse;
-      setDevices(data.devices);
+      applyDevices(data.devices);
       refreshStatuses(data.devices);
     } catch {
       /* transient */
     }
-  }, [refreshStatuses]);
+  }, [refreshStatuses, applyDevices]);
 
   useEffect(() => {
     // Initial load (setState happens asynchronously once data arrives).
@@ -216,27 +259,31 @@ export function Dashboard() {
   // Native HTML5 DnD with live preview: dragging over a card moves the dragged
   // tile to that slot immediately; the order is persisted on drag end. Tiles
   // reorder within their group only; group headers (in edit mode) reorder groups.
-
-  // Must stay ≥ the FLIP slide duration in useFlipReorder: while a displaced
-  // tile is still sliding, its transformed box can sweep across the cursor and
-  // re-fire dragenter, which would swap the pair back and forth forever.
-  // Compared against the drag event's monotonic timeStamp, not the wall clock.
-  const SWAP_COOLDOWN_MS = 220;
   const lastSwapAt = useRef(-Infinity);
 
-  const persistLayout = useCallback(
-    async (payload: { ids?: number[]; groups?: string[] }) => {
-      const res = await fetch("/api/tiles/order", {
+  const putOrder = useCallback(
+    async (url: string, body: Record<string, unknown>, rollback: () => void) => {
+      const res = await fetch(url, {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         toast.error("Couldn't save the new layout");
-        refreshTiles();
+        rollback();
       }
     },
-    [refreshTiles]
+    []
+  );
+
+  const persistLayout = useCallback(
+    (payload: { ids?: number[]; groups?: string[] }) => putOrder("/api/tiles/order", payload, refreshTiles),
+    [putOrder, refreshTiles]
+  );
+
+  const persistDeviceOrder = useCallback(
+    (ids: number[]) => putOrder("/api/devices/order", { ids }, refreshDevices),
+    [putOrder, refreshDevices]
   );
 
   const onTileDragStart = (tile: EnrichedTile) => {
@@ -253,12 +300,9 @@ export function Dashboard() {
     const from = tiles.findIndex((t) => t.id === dragId);
     const to = tiles.findIndex((t) => t.id === target.id);
     if (from < 0 || to < 0 || tiles[from].group_name !== target.group_name) return; // same group only
-    const next = tiles.slice();
-    const [moved] = next.splice(from, 1);
-    next.splice(to, 0, moved);
     tileOrderDirty.current = true;
     lastSwapAt.current = at;
-    applyTiles(next);
+    applyTiles(moveItem(tiles, from, to));
   };
 
   const onTileDragEnd = () => {
@@ -285,14 +329,11 @@ export function Dashboard() {
     const from = renderedGroups.indexOf(drag);
     const to = renderedGroups.indexOf(target);
     if (from < 0 || to < 0) return;
-    const reordered = renderedGroups.slice();
-    reordered.splice(from, 1);
-    reordered.splice(to, 0, drag);
     // Keep any known-but-currently-hidden groups after the rendered ones.
     const rest = groupOrderRef.current.filter((n) => !renderedGroups.includes(n));
     groupOrderDirty.current = true;
     lastSwapAt.current = at;
-    applyGroupOrder([...reordered, ...rest]);
+    applyGroupOrder([...moveItem(renderedGroups, from, to), ...rest]);
   };
 
   const onGroupDragEnd = () => {
@@ -303,9 +344,64 @@ export function Dashboard() {
     persistLayout({ groups: groupOrderRef.current });
   };
 
+  const onDeviceDragStart = (device: SafeDevice) => {
+    dragDeviceRef.current = device.id;
+    setDragDeviceId(device.id);
+    lastSwapAt.current = -Infinity; // first hover responds immediately
+  };
+
+  const onDeviceDragEnter = (target: SafeDevice, at: number) => {
+    const dragId = dragDeviceRef.current;
+    const devs = devicesRef.current;
+    if (dragId == null || dragId === target.id) return;
+    if (at - lastSwapAt.current < SWAP_COOLDOWN_MS) return; // let the slide settle
+    const from = devs.findIndex((d) => d.id === dragId);
+    const to = devs.findIndex((d) => d.id === target.id);
+    if (from < 0 || to < 0) return;
+    deviceOrderDirty.current = true;
+    lastSwapAt.current = at;
+    applyDevices(moveItem(devs, from, to));
+  };
+
+  const onDeviceDragEnd = () => {
+    dragDeviceRef.current = null;
+    setDragDeviceId(null);
+    if (!deviceOrderDirty.current) return;
+    deviceOrderDirty.current = false;
+    persistDeviceOrder(devicesRef.current.map((d) => d.id));
+  };
+
+  const startLayoutEdit = () => {
+    layoutSnapshotRef.current = {
+      tileIds: (tilesRef.current ?? []).map((t) => t.id),
+      groups: groupOrderRef.current.slice(),
+      deviceIds: devicesRef.current.map((d) => d.id),
+    };
+    setEditLayout(true);
+  };
+
+  const cancelLayoutEdit = () => {
+    setEditLayout(false);
+    const snapshot = layoutSnapshotRef.current;
+    if (!snapshot) return;
+    // Restore the orders as of entering edit mode (items that appeared since
+    // fall to the end) — each drop already persisted its arrangement, so write
+    // the snapshot back.
+    const restoredTiles = restoreOrder(tilesRef.current ?? [], snapshot.tileIds, (t) => t.id);
+    applyTiles(restoredTiles);
+    applyGroupOrder(snapshot.groups);
+    persistLayout({ ids: restoredTiles.map((t) => t.id), groups: snapshot.groups });
+    const restoredDevices = restoreOrder(devicesRef.current, snapshot.deviceIds, (d) => d.id);
+    applyDevices(restoredDevices);
+    persistDeviceOrder(restoredDevices.map((d) => d.id));
+  };
+
   const groups = tiles ? [...new Set(tiles.filter((t) => !t.auto).map((t) => t.group_name).filter(Boolean))] : [];
   const visible = tiles?.filter((t) => !t.hidden) ?? null;
   const grouped = visible ? groupTiles(visible, groupOrder) : [];
+  // Page-level actions (Add / layout editing) portal into the site header so
+  // they live in the navbar instead of a floating row between sections.
+  const headerSlot = mounted ? document.getElementById("header-actions") : null;
   // "deviceId|guestId" -> first discovered URL: makes Proxmox guest names clickable.
   const guestLinks = useMemo(() => {
     const links: Record<string, string> = {};
@@ -336,6 +432,15 @@ export function Dashboard() {
                 }}
                 onRemove={removeDevice}
                 scanning={scanningIds.has(d.id)}
+                reordering={editLayout}
+                isDragging={dragDeviceId === d.id}
+                nodeRef={(el) => {
+                  if (el) deviceNodes.current.set(d.id, el);
+                  else deviceNodes.current.delete(d.id);
+                }}
+                onReorderStart={onDeviceDragStart}
+                onReorderOver={onDeviceDragEnter}
+                onReorderEnd={onDeviceDragEnd}
               />
             ))}
           </div>
@@ -343,43 +448,6 @@ export function Dashboard() {
       )}
 
       <section aria-label="Links">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-muted-foreground">
-            {visible ? (visible.length === 0 ? "Links" : `${visible.length} links`) : ""}
-          </h2>
-          <div className="flex items-center gap-2">
-            {visible !== null && visible.length > 0 && (
-              <Button
-                variant={editLayout ? "default" : "outline"}
-                size="sm"
-                aria-pressed={editLayout}
-                onClick={() => setEditLayout((v) => !v)}
-              >
-                {editLayout ? (
-                  <Check data-icon="inline-start" className="size-3.5" />
-                ) : (
-                  <PencilLine data-icon="inline-start" className="size-3.5" />
-                )}
-                {editLayout ? "Done" : "Edit layout"}
-              </Button>
-            )}
-            <Button
-              size="sm"
-              onClick={() => {
-                setAddTab("link");
-                setAddOpen(true);
-              }}
-            >
-              <Plus data-icon="inline-start" className="size-3.5" /> Add
-            </Button>
-          </div>
-        </div>
-        {editLayout && (
-          <p className="mb-3 text-xs text-muted-foreground">
-            Drag links to reorder them within a group · drag group headings to reorder groups
-          </p>
-        )}
-
         {tiles === null ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -517,6 +585,46 @@ export function Dashboard() {
           onSaved={refreshTiles}
         />
       )}
+
+      {headerSlot &&
+        createPortal(
+          <>
+            {editLayout && (
+              <p className="mr-auto text-xs text-muted-foreground">
+                Editing layout — drag links, group headings, or device cards to reorder them
+              </p>
+            )}
+            {editLayout ? (
+              <>
+                <Button variant="outline" size="sm" onClick={cancelLayoutEdit}>
+                  <X data-icon="inline-start" className="size-3.5" /> Cancel
+                </Button>
+                <Button size="sm" onClick={() => setEditLayout(false)}>
+                  <Check data-icon="inline-start" className="size-3.5" /> Done
+                </Button>
+              </>
+            ) : (
+              <>
+                {visible !== null && visible.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={startLayoutEdit}>
+                    <PencilLine data-icon="inline-start" className="size-3.5" />
+                    <span className="hidden sm:inline">Edit layout</span>
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setAddTab("link");
+                    setAddOpen(true);
+                  }}
+                >
+                  <Plus data-icon="inline-start" className="size-3.5" /> Add
+                </Button>
+              </>
+            )}
+          </>,
+          headerSlot
+        )}
     </div>
   );
 }

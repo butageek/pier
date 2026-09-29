@@ -14,7 +14,7 @@ function toSafeDevice(d: Device): SafeDevice {
 }
 
 export async function GET() {
-  const rows = getDb().prepare("SELECT * FROM devices ORDER BY id").all() as Device[];
+  const rows = getDb().prepare("SELECT * FROM devices ORDER BY position, id").all() as Device[];
   return NextResponse.json({ devices: rows.map(toSafeDevice) });
 }
 
@@ -52,10 +52,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
-  const result = getDb()
-    .prepare("INSERT INTO devices (name, host, agent_url, agent_key, type) VALUES (?, ?, ?, ?, ?)")
-    .run(name, host, agentUrl, agentKey, type);
-  const device = getDb()
+  const db = getDb();
+  const nextPos = (
+    db.prepare("SELECT COALESCE(MAX(position), 0) + 1 AS n FROM devices").get() as { n: number }
+  ).n;
+  const result = db
+    .prepare(
+      "INSERT INTO devices (name, host, agent_url, agent_key, type, position) VALUES (?, ?, ?, ?, ?, ?)"
+    )
+    .run(name, host, agentUrl, agentKey, type, nextPos);
+  const device = db
     .prepare("SELECT * FROM devices WHERE id = ?")
     .get(result.lastInsertRowid) as Device;
   return NextResponse.json({ device: toSafeDevice(device) }, { status: 201 });
