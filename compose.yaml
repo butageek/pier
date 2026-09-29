@@ -1,0 +1,31 @@
+# Pier — the dashboard itself. Data (SQLite, agent keys) lives in ./data.
+services:
+  pier:
+    build: .
+    image: pier
+    container_name: pier
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "-", "http://127.0.0.1:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # Optional: discover the Docker server Pier itself runs on. For other
+  # servers, run pier-agent there instead (see README) — point Pier at
+  # http://<that-host>:8080 and reuse PIER_KEY below.
+  # pier-agent:
+  #   image: ghcr.io/butageek/pier-agent:latest
+  #   container_name: pier-agent
+  #   environment:
+  #     PIER_KEY: change-me
+  #   ports:
+  #     - "8080:8080"
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   restart: unless-stopped

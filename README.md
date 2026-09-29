@@ -55,6 +55,24 @@ npm start
 Data lives in `data/pier.db` (SQLite, created automatically, gitignored — agent
 keys included, so treat that file as local-only).
 
+### Deploy with Docker Compose
+
+```bash
+git clone https://github.com/butageek/pier.git && cd pier
+docker compose up -d --build       # dashboard at http://localhost:3000
+```
+
+Everything of consequence lives in `./data` (SQLite database, agent keys) —
+mount or back up that directory and your Pier survives rebuilds. Updates:
+
+```bash
+git pull && docker compose up -d --build
+```
+
+Want Pier to also watch the Docker server it runs on? Uncomment the
+`pier-agent` service in `compose.yaml` (one shared `PIER_KEY`, one Docker
+socket mount). For other servers, run pier-agent there — see below.
+
 ## Development
 
 ```bash

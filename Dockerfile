@@ -1,0 +1,31 @@
+# syntax=docker/dockerfile:1
+
+# --- build -------------------------------------------------------------------
+FROM node:20-alpine AS build
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npm run build
+
+# --- runtime -----------------------------------------------------------------
+FROM node:20-alpine
+WORKDIR /app
+
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    HOSTNAME=0.0.0.0 \
+    PORT=3000
+
+# Standalone server + static assets; SQLite lives in /app/data (mount a volume).
+COPY --from=build --chown=node:node /app/.next/standalone ./
+COPY --from=build --chown=node:node /app/.next/static ./.next/static
+RUN mkdir -p /app/data && chown node:node /app/data
+
+USER node
+EXPOSE 3000
+VOLUME /app/data
+CMD ["node", "server.js"]
