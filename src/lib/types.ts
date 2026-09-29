@@ -58,13 +58,16 @@ export type DeviceScanInfo = {
 /** Device as exposed to the browser (agent key stripped). */
 export type SafeDevice = Omit<Device, "agent_key">;
 
-/** One Docker container as listed in the device card popup (live state). */
+/** One Docker container as listed in the device card popup (live state +
+ *  usage; usage fields are null on agents that predate /container-stats). */
 export type ContainerStatus = {
   id: string;
   name: string;
   image: string;
   /** Docker container state: "running", "exited", ... */
   state: string;
+  cpuPct?: number | null;
+  memPct?: number | null;
 };
 
 /** Live resource usage for a device. */

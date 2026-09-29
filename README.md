@@ -19,8 +19,8 @@ host Pier talks to directly. No SSH tunnels, no exposed Docker API.
      - detects the OS, architecture, kernel, Docker version, CPU count and RAM;
      - shows live CPU / RAM usage (real host stats for the local machine, summed container stats for remotes);
      - the "N running" chip opens a hover popup listing every container — state
-       dot, name and image, clickable when an endpoint was discovered — and
-       **auto-creates a clickable link for each published `ip:port` endpoint**,
+       dot, name and live CPU/RAM%, clickable when an endpoint was discovered —
+       and **auto-creates a clickable link for each published `ip:port` endpoint**,
        detecting `http` vs `https` per endpoint with a TLS probe (self-signed OK);
        multi-port containers get one link per port; stopped containers keep their links,
        dimmed with their state.

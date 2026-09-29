@@ -61,7 +61,7 @@ PIER_KEY=x node agent/index.mjs   # run the agent standalone (zero deps)
 | `src/lib/icons.ts` | dashboard-icons slug index (disk-cached, weekly refresh) + matcher |
 | `src/components/dashboard.tsx` | dashboard + layout-edit drag & drop (FLIP animations in `use-flip.ts`; SWAP_COOLDOWN_MS rationale in situ) |
 | `src/components/*` | device card/form, add + tile dialogs, icon/group pickers, `logo.tsx` (shared with `src/app/icon.svg`) |
-| `agent/index.mjs` | the whole agent: token auth, `/info` `/containers` `/stats` `/health` |
+| `agent/index.mjs` | the whole agent: token auth, `/info` `/containers` `/stats` `/container-stats` `/health` |
 | `install.sh` · `Dockerfile` · `compose.yaml` | the three deployment paths (see above) |
 
 ## Conventions & gotchas

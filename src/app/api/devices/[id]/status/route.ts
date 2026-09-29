@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { agentContainers, agentStats, AgentError } from "@/lib/agent";
+import { agentContainers, agentContainerStats, agentStats, AgentError } from "@/lib/agent";
 import { proxmoxLiveStatus } from "@/lib/proxmox";
 import type { Device, DeviceStatus } from "@/lib/types";
 
@@ -51,7 +51,13 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 }
 
 async function dockerLiveStatus(device: Device): Promise<DeviceStatus> {
-  const [s, containers] = await Promise.all([agentStats(device), agentContainers(device)]);
+  const [s, containers, cStats] = await Promise.all([
+    agentStats(device),
+    agentContainers(device),
+    // Per-container usage is new — older agents 404 and the popup shows "—".
+    agentContainerStats(device).catch(() => ({ docker: false, stats: [] })),
+  ]);
+  const byId = new Map(cStats.stats.map((x) => [x.id, x]));
   const info = JSON.parse(device.info || "{}");
   return {
     online: true,
@@ -65,7 +71,17 @@ async function dockerLiveStatus(device: Device): Promise<DeviceStatus> {
     runningContainers: info.containers?.running ?? null,
     // For the card popup: running first, then alphabetical.
     containers: containers
-      .map((c) => ({ id: c.id, name: c.name, image: c.image, state: c.state }))
+      .map((c) => {
+        const st = byId.get(c.id);
+        return {
+          id: c.id,
+          name: c.name,
+          image: c.image,
+          state: c.state,
+          cpuPct: st?.cpuPct ?? null,
+          memPct: st && st.memBytes != null && st.memLimitBytes ? pct(st.memBytes / st.memLimitBytes) : null,
+        };
+      })
       .sort(
         (a, b) =>
           Number(b.state === "running") - Number(a.state === "running") ||

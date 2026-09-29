@@ -208,16 +208,17 @@ function GuestRow({
     </div>
   );
 }
-/** One container row in the Docker device popup: state dot, name (clickable
- *  when an endpoint was discovered), image on the right. */
+/** One container row in the Docker device popup, mirroring GuestRow: state
+ *  dot, name (clickable when an endpoint was discovered), live CPU/RAM% on
+ *  the right ("—" on agents that predate per-container stats). */
 function ContainerRow({ container, href }: { container: ContainerStatus; href?: string }) {
   const running = container.state === "running";
+  const title = running
+    ? `CPU ${container.cpuPct ?? "—"}% · RAM ${container.memPct ?? "—"}% · ${container.image}`
+    : `${container.state} · ${container.image}`;
   return (
-    <div className="flex items-center gap-2 text-xs" title={`${container.image} · ${container.state}`}>
-      <span
-        className={`size-1.5 shrink-0 rounded-full ${running ? "bg-emerald-500" : "bg-zinc-600"}`}
-        aria-label={container.state}
-      />
+    <div className="flex items-center gap-2 text-xs" title={title}>
+      <Container className="size-3 shrink-0 text-muted-foreground" />
       {href ? (
         <a
           href={href}
@@ -231,8 +232,17 @@ function ContainerRow({ container, href }: { container: ContainerStatus; href?: 
       ) : (
         <span className="truncate">{container.name}</span>
       )}
-      <span className="ml-auto max-w-32 shrink-0 truncate text-muted-foreground">
-        {container.image.split("/").pop()}
+      <span className="ml-auto flex shrink-0 items-center gap-1.5">
+        {running ? (
+          <>
+            <span className="size-1.5 rounded-full bg-emerald-500" aria-label="running" />
+            <span className="tabular-nums text-muted-foreground">
+              {container.cpuPct ?? "—"}% · {container.memPct ?? "—"}%
+            </span>
+          </>
+        ) : (
+          <span className="text-muted-foreground/70">{container.state}</span>
+        )}
       </span>
     </div>
   );

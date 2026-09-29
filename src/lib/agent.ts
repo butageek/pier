@@ -58,6 +58,13 @@ export type AgentContainer = {
   ports: { ip?: string; publicPort?: number; privatePort?: number; type?: string }[];
 };
 
+export type AgentContainerStat = {
+  id: string;
+  cpuPct: number | null;
+  memBytes: number | null;
+  memLimitBytes: number | null;
+};
+
 export type AgentStats = {
   cpuPct: number;
   memBytes: number;
@@ -77,6 +84,11 @@ export async function agentContainers(device: Device): Promise<AgentContainer[]>
 
 export function agentStats(device: Device) {
   return agentGet<AgentStats>(device, "/stats");
+}
+
+/** Per-container CPU/RAM. Newer agents only — callers catch 404s from old ones. */
+export function agentContainerStats(device: Device) {
+  return agentGet<{ docker: boolean; stats: AgentContainerStat[] }>(device, "/container-stats");
 }
 
 /** Quick connectivity + auth check used when adding a device. */

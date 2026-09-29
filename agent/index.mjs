@@ -16,6 +16,7 @@
  *   GET /info        OS/arch/CPU/RAM/uptime + Docker presence    (auth)
  *   GET /containers  all containers + published ports           (auth)
  *   GET /stats       live CPU/RAM/load sampled from the host    (auth)
+ *   GET /container-stats  per-container CPU%/RAM (needs 2 polls) (auth)
  *
  * Auth: X-Pier-Key header or ?key= — constant-time compared with PIER_KEY.
  */
@@ -169,6 +170,45 @@ async function dockerContainers() {
 }
 
 // ---------------------------------------------------------------------------
+// per-container stats — CPU% needs two samples, so keep the previous reading
+// per container and compute deltas between polls (Pier polls every 15s).
+// ---------------------------------------------------------------------------
+const containerCpuPrev = new Map(); // id -> { total, system }
+
+async function dockerContainerStats() {
+  const containers = await dockerContainers();
+  if (containers === null) return null;
+  const stats = await Promise.all(
+    containers.map(async (c) => {
+      let s;
+      try {
+        s = await dockerGet(`/containers/${c.id}/stats?stream=false`, 5000);
+      } catch {
+        return { id: c.id, cpuPct: null, memBytes: null, memLimitBytes: null };
+      }
+      const cpu = s.cpu_stats?.cpu_usage?.total_usage ?? null;
+      const system = s.cpu_stats?.system_cpu_usage ?? null;
+      const cpus = s.cpu_stats?.online_cpus ?? s.cpu_stats?.cpu_usage?.percpu_usage?.length ?? 1;
+      // docker stats subtracts kernel cache from memory usage (cgroup v1/v2).
+      const m = s.memory_stats ?? {};
+      const memBytes = m.usage != null ? m.usage - (m.stats?.inactive_file ?? m.stats?.cache ?? 0) : null;
+      const memLimitBytes = m.limit ?? null;
+      let cpuPct = null;
+      const prev = containerCpuPrev.get(c.id);
+      if (prev && cpu != null && system != null && system > prev.system && cpu >= prev.total) {
+        cpuPct = Math.round(((cpu - prev.total) / (system - prev.system)) * cpus * 1000) / 10;
+      }
+      containerCpuPrev.set(c.id, { total: cpu, system });
+      return { id: c.id, cpuPct, memBytes, memLimitBytes };
+    })
+  );
+  // Forget containers that no longer exist.
+  const live = new Set(containers.map((c) => c.id));
+  for (const id of containerCpuPrev.keys()) if (!live.has(id)) containerCpuPrev.delete(id);
+  return stats;
+}
+
+// ---------------------------------------------------------------------------
 // server
 // ---------------------------------------------------------------------------
 const server = http.createServer(async (req, res) => {
@@ -212,6 +252,11 @@ const server = http.createServer(async (req, res) => {
         loadAvg: os.loadavg(),
         uptimeSec: Math.round(os.uptime()),
       });
+    }
+
+    if (path === "/container-stats") {
+      const stats = await dockerContainerStats();
+      return send(200, { docker: stats !== null, stats: stats ?? [] });
     }
 
     return send(404, { error: "not found" });
