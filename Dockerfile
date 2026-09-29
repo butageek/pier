@@ -5,7 +5,10 @@ FROM node:20-alpine AS build
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+# --ignore-scripts: better-sqlite3 bundles prebuilt binaries for every platform
+# (loaded at runtime); npm 10 would otherwise auto-run node-gyp for its
+# binding.gyp and fail — alpine has no make/g++.
+RUN npm ci --ignore-scripts
 
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1

@@ -92,7 +92,10 @@ fi
 [ -x "$build_node" ] || die "no Node runtime available"
 log "building with $($build_node --version) (this takes a minute)"
 cd "$stage"
-PATH="$(dirname "$build_node"):$PATH" npm ci --no-audit --no-fund
+# --ignore-scripts: better-sqlite3 ships prebuilt binaries for every platform
+# and loads them at runtime; without this, older npm auto-runs node-gyp for its
+# binding.gyp and a clean server (no make/g++) fails the install.
+PATH="$(dirname "$build_node"):$PATH" npm ci --ignore-scripts --no-audit --no-fund
 PATH="$(dirname "$build_node"):$PATH" npm run build
 cp -r .next/static .next/standalone/.next/static
 rm -rf node_modules .next/cache # the standalone tree is self-contained
