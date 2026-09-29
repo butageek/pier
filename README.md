@@ -73,6 +73,22 @@ Want Pier to also watch the Docker server it runs on? Uncomment the
 `pier-agent` service in `compose.yaml` (one shared `PIER_KEY`, one Docker
 socket mount). For other servers, run pier-agent there — see below.
 
+### Install on a bare Linux server (one-liner)
+
+No Docker needed — a single script installs Pier as a systemd service that
+starts on boot, downloading its own Node runtime if the server doesn't have
+Node >= 20 (nothing outside `/opt/pier` is touched):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/butageek/pier/main/install.sh | sudo bash
+```
+
+- Dashboard on `http://<host>:3000`, app in `/opt/pier`, database in `/opt/pier/data`
+- Runs as a dedicated system user; `systemctl status pier`, `journalctl -u pier -f`
+- Options: `PIER_DIR=/somewhere PIER_PORT=3000 PIER_RELEASE=v0.1.0 curl … | sudo bash`
+- **Upgrade**: re-run the script (your `data/` is carried over) · **Uninstall**:
+  `systemctl disable --now pier && rm -rf /opt/pier /etc/systemd/system/pier.service`
+
 ## Development
 
 ```bash
