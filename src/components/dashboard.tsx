@@ -616,9 +616,11 @@ export function Dashboard() {
                 title="Countdown to the next automatic refresh"
               >
                 <RotateCw className="size-3" aria-hidden />
-                devices <Countdown until={statusRefreshAt} className="tabular-nums" label="Next device usage refresh" />
+                devices{" "}
+                <Countdown until={statusRefreshAt} className="tabular-nums" label="Next device usage refresh" />
                 <span className="text-muted-foreground/40">·</span>
-                links <Countdown until={healthRefreshAt} className="tabular-nums" label="Next link reachability refresh" />
+                links{" "}
+                <Countdown until={healthRefreshAt} className="tabular-nums" label="Next link reachability refresh" />
               </p>
             )}
             {editLayout ? (
