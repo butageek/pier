@@ -24,8 +24,8 @@ ship Node 24 LTS).
 - **Docker Compose** — `compose.yaml` builds the `Dockerfile` (Next standalone
   output; all SQLite N-API prebuilds bundled, so one image serves every arch).
 - **One-liner** — `install.sh` installs the prebuilt `pier-standalone.tar.gz`
-  release bundle as a systemd service (falls back to building from source;
-  `npm ci --ignore-scripts` — better-sqlite3 needs no toolchain).
+  release bundle as a systemd service; falls back to building from source
+  (`npm ci --ignore-scripts` — better-sqlite3 needs no compiler toolchain).
 - **Plain Node** — `npm ci && npm run build && npm start`.
 
 Releases: tag `vX.Y.Z` → bump commit → `gh release create`. The `build-app`
@@ -37,7 +37,7 @@ pushes the pier-agent image to GHCR on every push.
 ```bash
 npm run dev     # dev server at http://localhost:3000
 npm run lint    # must be clean
-npm run build   # must pass (type-checks too; run before bare `tsc` after a clean)
+npm run build   # must pass — also type-checks and regenerates the route types bare `tsc` needs
 PIER_KEY=x node agent/index.mjs   # run the agent standalone (zero deps)
 ```
 
@@ -75,8 +75,7 @@ PIER_KEY=x node agent/index.mjs   # run the agent standalone (zero deps)
   `SafeDevice` (key stripped). `data/` is local-only (gitignored) and holds keys.
 - **DB**: access only via `getDb()`; schema lives in `open()` as `CREATE TABLE
   IF NOT EXISTS`. No migration framework — when changing columns, re-add a
-  `migrate()` with `columnExists`-style guards in `src/lib/db.ts` (the pre-reset
-  migrations were removed once every DB ran the current schema).
+  `migrate()` with `columnExists`-style guards in `src/lib/db.ts`.
 - **Docker**: only the agent talks to a Docker daemon; Pier never does.
 - **Proxmox**: PVE 9 privilege-separated tokens get the *intersection* of user and token
   permissions — a PVEAuditor grant must exist on `/` for BOTH `pier@pve` and `pier@pve!pier`,
