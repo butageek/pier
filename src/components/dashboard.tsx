@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type DragEvent } from "react";
 import { createPortal } from "react-dom";
-import { Check, GripVertical, PencilLine, Plus, X } from "lucide-react";
+import { Check, GripVertical, PencilLine, Plus, RotateCw, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { DeviceCard } from "@/components/device-card";
 import { TileCard } from "@/components/tile-card";
 import { TileDialog } from "@/components/tile-dialog";
 import { useFlipReorder } from "@/components/use-flip";
+import { Countdown } from "@/components/use-countdown";
 import type { EnrichedTile } from "@/lib/tiles";
 import type { DeviceStatus, SafeDevice, TileHealth } from "@/lib/types";
 
@@ -447,7 +448,6 @@ export function Dashboard() {
                 }}
                 onRemove={removeDevice}
                 scanning={scanningIds.has(d.id)}
-                nextRefreshAt={statusRefreshAt}
                 reordering={editLayout}
                 isDragging={dragDeviceId === d.id}
                 nodeRef={(el) => {
@@ -537,7 +537,6 @@ export function Dashboard() {
                         key={t.id}
                         tile={t}
                         health={health[t.id]}
-                        nextRefreshAt={healthRefreshAt}
                         reordering={editLayout}
                         isDragging={dragTileId === t.id}
                         nodeRef={(el) => {
@@ -609,6 +608,17 @@ export function Dashboard() {
             {editLayout && (
               <p className="mr-auto text-xs text-muted-foreground">
                 Editing layout — drag links, group headings, or device cards to reorder them
+              </p>
+            )}
+            {!editLayout && (
+              <p
+                className="mr-auto hidden items-center gap-1 text-xs text-muted-foreground/70 sm:flex"
+                title="Countdown to the next automatic refresh"
+              >
+                <RotateCw className="size-3" aria-hidden />
+                devices <Countdown until={statusRefreshAt} className="tabular-nums" label="Next device usage refresh" />
+                <span className="text-muted-foreground/40">·</span>
+                links <Countdown until={healthRefreshAt} className="tabular-nums" label="Next link reachability refresh" />
               </p>
             )}
             {editLayout ? (

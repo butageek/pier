@@ -13,7 +13,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { IconPreview } from "@/components/icon-picker";
-import { Countdown } from "@/components/use-countdown";
 import type { EnrichedTile } from "@/lib/tiles";
 import type { TileHealth } from "@/lib/types";
 
@@ -66,7 +65,6 @@ function StatusDot({ tile, health }: { tile: EnrichedTile; health?: TileHealth }
 export function TileCard({
   tile,
   health,
-  nextRefreshAt,
   onEdit,
   onDelete,
   onHide,
@@ -80,8 +78,6 @@ export function TileCard({
   tile: EnrichedTile;
   /** Latest reachability probe; undefined until the first check completes. */
   health?: TileHealth;
-  /** Epoch ms of the next reachability refresh — shown as a countdown. */
-  nextRefreshAt?: number;
   onEdit: (tile: EnrichedTile) => void;
   onDelete: (tile: EnrichedTile) => void;
   onHide: (tile: EnrichedTile) => void;
@@ -124,13 +120,6 @@ export function TileCard({
         <div className="flex items-center gap-2">
           <span className="truncate text-sm font-medium">{tile.title}</span>
           <StatusDot tile={tile} health={health} />
-          {!reordering && nextRefreshAt != null && (
-            <Countdown
-              until={nextRefreshAt}
-              label="Next reachability refresh"
-              className="ml-auto pr-1 text-[10px] tabular-nums text-muted-foreground/50"
-            />
-          )}
         </div>
         <div className="truncate text-xs text-muted-foreground">
           {tile.description || tile.url.replace(/^https?:\/\//, "")}

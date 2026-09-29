@@ -14,7 +14,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatBytes, formatUptime, osLabel, timeAgo } from "@/lib/format";
-import { Countdown } from "@/components/use-countdown";
 import type { ContainerStatus, DeviceScanInfo, DeviceStatus, PveGuestStatus, SafeDevice } from "@/lib/types";
 
 function Bar({ pct, label }: { pct: number | null; label: string }) {
@@ -53,15 +52,12 @@ function CursorPopup({
   label,
   icon,
   title,
-  refreshAt,
   children,
 }: {
   label: string;
   icon: ReactNode;
   /** Popup heading, also the trigger's tooltip. */
   title: string;
-  /** Epoch ms of the next data refresh — shown as "refreshes in Ns". */
-  refreshAt?: number;
   children: ReactNode;
 }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -157,11 +153,6 @@ function CursorPopup({
               {title}
             </p>
             <div className="space-y-1">{children}</div>
-            {refreshAt != null && (
-              <p className="mt-1.5 border-t border-border/60 px-1 pt-1.5 text-[10px] text-muted-foreground/70">
-                refreshes in <Countdown until={refreshAt} className="tabular-nums" />
-              </p>
-            )}
           </div>,
           document.body
         )}
@@ -265,7 +256,6 @@ export function DeviceCard({
   onEdit,
   onRemove,
   scanning,
-  nextRefreshAt,
   reordering = false,
   isDragging = false,
   nodeRef,
@@ -281,8 +271,6 @@ export function DeviceCard({
   onEdit: (device: SafeDevice) => void;
   onRemove: (device: SafeDevice) => void;
   scanning: boolean;
-  /** Epoch ms of the next scheduled usage refresh — shown as a countdown. */
-  nextRefreshAt?: number;
   /** Layout-edit mode: the card becomes a drag handle (actions hidden). */
   reordering?: boolean;
   isDragging?: boolean;
@@ -422,7 +410,6 @@ export function DeviceCard({
               label={`${status.guests.length} guests`}
               icon={<Boxes className="size-3" />}
               title="VMs & containers"
-              refreshAt={nextRefreshAt}
             >
               {status.guests.map((g) => (
                 <GuestRow key={g.id} guest={g} href={guestLinks?.[`${device.id}|${g.id}`]} />
@@ -439,7 +426,6 @@ export function DeviceCard({
               label={containerSummary(status.containers)}
               icon={<Container className="size-3" />}
               title="Containers"
-              refreshAt={nextRefreshAt}
             >
               {status.containers.map((c) => (
                 <ContainerRow key={c.id} container={c} href={guestLinks?.[`${device.id}|${c.id}`]} />
@@ -456,13 +442,6 @@ export function DeviceCard({
           )
         )}
         {status?.uptimeSec != null && <span>up {formatUptime(status.uptimeSec)}</span>}
-        {!reordering && nextRefreshAt != null && (
-          <Countdown
-            until={nextRefreshAt}
-            label="Next usage refresh"
-            className="tabular-nums text-muted-foreground/60"
-          />
-        )}
       </div>
     </div>
   );
