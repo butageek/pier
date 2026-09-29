@@ -23,6 +23,12 @@ type HealthResponse = { health: Record<number, TileHealth> };
 /** Never subscribes — see the hydration check below. */
 const noopSubscribe = () => () => {};
 
+// Dashboard refresh cadences (ms) — one source for the timers, the countdown
+// deadlines, and their reset after each tick.
+const STATUS_PERIOD_MS = 15_000; // device usage (card bars + popups)
+const HEALTH_PERIOD_MS = 30_000; // link reachability dots
+const TILES_PERIOD_MS = 60_000; // the tiles list itself
+
 // Must stay ≥ the FLIP slide duration in useFlipReorder: while a displaced tile
 // is still sliding, its transformed box can sweep across the cursor and re-fire
 // dragenter, which would swap the pair back and forth forever. Compared against
@@ -83,6 +89,9 @@ export function Dashboard() {
   const [editingDevice, setEditingDevice] = useState<SafeDevice | null>(null);
   const [editLayout, setEditLayout] = useState(false);
   const [groupOrder, setGroupOrder] = useState<string[]>([]);
+  // Next-scheduled refresh times (epoch ms) shown as countdowns on cards.
+  const [statusRefreshAt, setStatusRefreshAt] = useState(() => Date.now() + STATUS_PERIOD_MS);
+  const [healthRefreshAt, setHealthRefreshAt] = useState(() => Date.now() + HEALTH_PERIOD_MS);
   const [dragTileId, setDragTileId] = useState<number | null>(null);
   const [dragGroup, setDragGroup] = useState<string | null>(null);
   const [dragDeviceId, setDragDeviceId] = useState<number | null>(null);
@@ -175,9 +184,15 @@ export function Dashboard() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshTiles();
     refreshDevices();
-    const tilesTimer = setInterval(refreshTiles, 60_000);
-    const healthTimer = setInterval(refreshHealth, 30_000);
-    const statusTimer = setInterval(() => refreshStatuses(devices), 15_000);
+    const tilesTimer = setInterval(refreshTiles, TILES_PERIOD_MS);
+    const healthTimer = setInterval(() => {
+      refreshHealth();
+      setHealthRefreshAt(Date.now() + HEALTH_PERIOD_MS);
+    }, HEALTH_PERIOD_MS);
+    const statusTimer = setInterval(() => {
+      refreshStatuses(devices);
+      setStatusRefreshAt(Date.now() + STATUS_PERIOD_MS);
+    }, STATUS_PERIOD_MS);
     return () => {
       clearInterval(tilesTimer);
       clearInterval(healthTimer);
@@ -432,6 +447,7 @@ export function Dashboard() {
                 }}
                 onRemove={removeDevice}
                 scanning={scanningIds.has(d.id)}
+                nextRefreshAt={statusRefreshAt}
                 reordering={editLayout}
                 isDragging={dragDeviceId === d.id}
                 nodeRef={(el) => {
@@ -521,6 +537,7 @@ export function Dashboard() {
                         key={t.id}
                         tile={t}
                         health={health[t.id]}
+                        nextRefreshAt={healthRefreshAt}
                         reordering={editLayout}
                         isDragging={dragTileId === t.id}
                         nodeRef={(el) => {
