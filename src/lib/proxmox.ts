@@ -135,6 +135,7 @@ export async function testProxmox(url: string, token: string): Promise<void> {
     agent_key: token,
     info: "{}",
     last_scan: null,
+    position: 0,
     created_at: "",
   };
   await pveGet(fake, "/api2/json/version");

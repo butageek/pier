@@ -89,6 +89,7 @@ export async function testAgent(url: string, key: string): Promise<void> {
     agent_key: key,
     info: "{}",
     last_scan: null,
+    position: 0,
     created_at: "",
   };
   await agentGet<AgentInfo>(fake, "/info");
