@@ -1,0 +1,36 @@
+# Builds the Pier dashboard as a portable standalone bundle and attaches it to
+# the release. better-sqlite3's bundled N-API prebuilds cover every platform,
+# so a single artifact serves linux x64/arm64, glibc and musl alike — the
+# installer pairs it with a Node runtime and runs it under systemd, skipping
+# the on-server build entirely.
+name: Build app bundle
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - run: npm ci --ignore-scripts
+
+      - run: npm run build
+
+      - name: Pack standalone bundle
+        run: |
+          cp -r .next/static .next/standalone/.next/static
+          tar -czf pier-standalone.tar.gz -C .next/standalone .
+
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "$GITHUB_REF_NAME" pier-standalone.tar.gz --clobber

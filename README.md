@@ -76,8 +76,10 @@ socket mount). For other servers, run pier-agent there — see below.
 ### Install on a bare Linux server (one-liner)
 
 No Docker needed — a single script installs Pier as a systemd service that
-starts on boot, downloading its own Node runtime if the server doesn't have
-Node >= 20 (nothing outside `/opt/pier` is touched):
+starts on boot. It fetches the **prebuilt release bundle** (nothing is compiled
+on your server — the whole install takes seconds) and downloads its own Node
+runtime if the server doesn't have Node >= 20 (nothing outside `/opt/pier` is
+touched):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/butageek/pier/main/install.sh | sudo bash
@@ -85,7 +87,9 @@ curl -fsSL https://raw.githubusercontent.com/butageek/pier/main/install.sh | sud
 
 - Dashboard on `http://<host>:3000`, app in `/opt/pier`, database in `/opt/pier/data`
 - Runs as a dedicated system user; `systemctl status pier`, `journalctl -u pier -f`
-- Options: `PIER_DIR=/somewhere PIER_PORT=3000 PIER_RELEASE=v0.1.0 curl … | sudo bash`
+- Options: `PIER_DIR=/somewhere PIER_PORT=3000 PIER_RELEASE=v0.2.0 curl … | sudo bash`
+- Force a local source build with `PIER_BUILD_FROM_SOURCE=1` (the automatic
+  fallback when a release has no bundle)
 - **Upgrade**: re-run the script (your `data/` is carried over) · **Uninstall**:
   `systemctl disable --now pier && rm -rf /opt/pier /etc/systemd/system/pier.service`
 
