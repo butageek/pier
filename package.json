@@ -34,7 +34,7 @@
     "tailwindcss": "^4",
     "typescript": "^5"
   },
-  "description": "A dock for your self-hosted services — dashboard links, agent-based server/Docker discovery, automatic icons",
+  "description": "A dock for your self-hosted services — links auto-discovered from Docker servers (pier-agent) and Proxmox VE, with health pings, automatic icons and a drag-and-drop layout",
   "license": "MIT",
   "engines": {
     "node": ">=20"
