@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type DragEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
+import { createPortal } from "react-dom";
 import { Server, Cpu, Container, Boxes, Monitor, RefreshCw, ArrowUpRight, GripVertical } from "lucide-react";
 import { cn } from "cn";
 import { Badge } from "@/components/ui/badge";
@@ -31,8 +32,123 @@ function Bar({ pct, label }: { pct: number | null; label: string }) {
   );
 }
 
-/** Guests shown inline before the "+N more" expander. */
-const GUESTS_INLINE = 5;
+/** Popup width in px — kept in sync with the w-72 class below. */
+const POPUP_WIDTH = 288;
+
+/**
+ * Proxmox guests on the device card: a compact "N guests" trigger that opens
+ * a cursor-following popup listing every VM/LXC with live CPU/RAM. Hover to
+ * peek (the popup tracks the mouse and stays open while hovered, so the guest
+ * links inside stay clickable); click or tap to pin it under the trigger;
+ * Esc or an outside click closes it.
+ */
+function GuestPopup({
+  guests,
+  deviceId,
+  guestLinks,
+}: {
+  guests: PveGuestStatus[];
+  deviceId: number;
+  guestLinks?: Record<string, string>;
+}) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null); // cursor-follow position
+  const [anchorPt, setAnchorPt] = useState<{ x: number; y: number } | null>(null); // pinned position
+  const [pinned, setPinned] = useState(false);
+  const hideTimer = useRef(0);
+
+  const close = useCallback(() => {
+    setPinned(false);
+    setPos(null);
+    setAnchorPt(null);
+  }, []);
+  const scheduleHide = useCallback(() => {
+    hideTimer.current = window.setTimeout(close, 150);
+  }, [close]);
+  const cancelHide = useCallback(() => window.clearTimeout(hideTimer.current), []);
+  useEffect(() => cancelHide, [cancelHide]);
+
+  // Pinned popups close on Esc or a click outside (trigger + popup excluded).
+  useEffect(() => {
+    if (!pinned) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!triggerRef.current?.contains(t) && !popupRef.current?.contains(t)) close();
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onDown);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onDown);
+    };
+  }, [pinned, close]);
+
+  // Fixed position by the cursor, or at the point captured when pinned
+  // (click/tap), clamped to the viewport. 340 ≈ max popup height + margin.
+  const anchor = pos ?? (pinned ? anchorPt : null);
+  let left = 0;
+  let top = 0;
+  if (anchor) {
+    left = Math.max(8, Math.min(anchor.x + 14, window.innerWidth - POPUP_WIDTH - 8));
+    top = Math.max(8, Math.min(anchor.y + 14, window.innerHeight - 340));
+  }
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={pinned || pos != null}
+        title="VMs & containers"
+        className="inline-flex cursor-help items-center gap-1 underline decoration-dotted underline-offset-4"
+        onMouseEnter={cancelHide}
+        onMouseMove={
+          pinned
+            ? undefined
+            : (e) => {
+                cancelHide();
+                setPos({ x: e.clientX, y: e.clientY });
+              }
+        }
+        onMouseLeave={pinned ? undefined : scheduleHide}
+        onClick={() => {
+          cancelHide();
+          if (pinned) {
+            close();
+          } else {
+            // Anchor under the trigger instead of following the cursor.
+            const r = triggerRef.current?.getBoundingClientRect();
+            if (r) setAnchorPt({ x: r.left - 14, y: r.bottom - 8 });
+            setPos(null);
+            setPinned(true);
+          }
+        }}
+      >
+        <Boxes className="size-3" />
+        {guests.length} guests
+      </button>
+
+      {(pinned || pos != null) &&
+        createPortal(
+          <div
+            ref={popupRef}
+            onMouseEnter={cancelHide}
+            onMouseLeave={scheduleHide}
+            className="fixed z-50 max-h-80 w-72 animate-in fade-in-0 zoom-in-95 space-y-1 overflow-y-auto rounded-lg border border-border bg-popover p-2 text-popover-foreground shadow-xl duration-100"
+            style={{ left, top }}
+          >
+            {guests.map((g) => (
+              <GuestRow key={g.id} guest={g} href={guestLinks?.[`${deviceId}|${g.id}`]} />
+            ))}
+          </div>,
+          document.body
+        )}
+    </>
+  );
+}
 
 /** One guest row on a Proxmox card: type icon, name, state, live CPU/RAM. */
 function GuestRow({
@@ -82,37 +198,6 @@ function GuestRow({
     </div>
   );
 }
-
-/** Collapsible guest list — capped inline so the card stays close to its neighbors' height. */
-function GuestList({
-  guests,
-  deviceId,
-  guestLinks,
-}: {
-  guests: PveGuestStatus[];
-  deviceId: number;
-  guestLinks?: Record<string, string>;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const visible = expanded ? guests : guests.slice(0, GUESTS_INLINE);
-  return (
-    <div className="mt-3 space-y-1 border-t border-border/70 pt-2.5">
-      {visible.map((g) => (
-        <GuestRow key={g.id} guest={g} href={guestLinks?.[`${deviceId}|${g.id}`]} />
-      ))}
-      {guests.length > GUESTS_INLINE && (
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="text-xs text-muted-foreground transition-colors hover:text-foreground"
-        >
-          {expanded ? "show less" : `+${guests.length - GUESTS_INLINE} more guests`}
-        </button>
-      )}
-    </div>
-  );
-}
-
 export function DeviceCard({
   device,
   status,
@@ -261,24 +346,26 @@ export function DeviceCard({
         />
       </div>
 
-      {isPve && status?.guests && status.guests.length > 0 && (
-        <GuestList
-          guests={status.guests}
-          deviceId={device.id}
-          guestLinks={reordering ? undefined : guestLinks}
-        />
-      )}
-
       <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1">
           <Cpu className="size-3" /> {info.cpuCount ?? "?"} cores
         </span>
-        {(hasDocker || info.containers) && (
-          <span className="inline-flex items-center gap-1">
-            {isPve ? <Boxes className="size-3" /> : <Container className="size-3" />}
-            {running ?? 0} running
-            {info.containers?.stopped ? ` / ${info.containers.stopped} stopped` : ""}
-          </span>
+        {isPve && status?.guests && status.guests.length > 0 ? (
+          reordering ? (
+            <span className="inline-flex items-center gap-1">
+              <Boxes className="size-3" /> {status.guests.length} guests
+            </span>
+          ) : (
+            <GuestPopup guests={status.guests} deviceId={device.id} guestLinks={guestLinks} />
+          )
+        ) : (
+          (hasDocker || info.containers) && (
+            <span className="inline-flex items-center gap-1">
+              {isPve ? <Boxes className="size-3" /> : <Container className="size-3" />}
+              {running ?? 0} running
+              {info.containers?.stopped ? ` / ${info.containers.stopped} stopped` : ""}
+            </span>
+          )
         )}
         {status?.uptimeSec != null && <span>up {formatUptime(status.uptimeSec)}</span>}
       </div>

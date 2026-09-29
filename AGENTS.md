@@ -12,8 +12,8 @@ A single-page, self-hosted dashboard — "a dock for your services". Two concept
   Node script reporting host stats from `/proc` and containers via the local
   Docker socket (every published container endpoint becomes an auto-discovered
   link), and **Proxmox VE** hosts talked to directly via the PVE API
-  (`src/lib/proxmox.ts`) — guests summarized on the device card, LXC web
-  endpoints become auto-discovered links.
+  (`src/lib/proxmox.ts`) — guests listed in a cursor-following popup on the
+  device card, LXC web endpoints become auto-discovered links.
 
 Stack: Next.js 16 (App Router) · React 19 · shadcn/ui **base-nova** (on
 @base-ui/react) · Tailwind v4 · better-sqlite3 · Node >= 20 (runtime images

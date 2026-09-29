@@ -23,8 +23,10 @@ host Pier talks to directly. No SSH tunnels, no exposed Docker API.
        multi-port containers get one link per port; stopped containers keep their links,
        dimmed with their state.
    - **Proxmox VE** — no agent: Pier talks to the PVE API directly (API token, self-signed certs OK):
-     - the device card shows a PVE-portal-style guest summary — every VM/LXC with state and
-       live CPU/RAM, guest names clickable when a web endpoint was discovered;
+     - the device card shows a **"N guests" chip** — hover (or tap) it for a
+       PVE-portal-style popup listing every VM/LXC with state and live CPU/RAM,
+       following the mouse; guest names are clickable when a web endpoint was
+       discovered;
      - running LXCs get direct links to web services found by probing ~30 common self-hosted
        service ports (80, 443, 3000, 8080, 8443, 8090, 8096, ...) on the guest's IP;
      - cluster CPU/RAM, PVE version and VM/LXC counts on the card header.
