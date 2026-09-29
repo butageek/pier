@@ -90,7 +90,36 @@ else
   build_node="$NODE_BIN"
 fi
 [ -x "$build_node" ] || die "no Node runtime available"
-log "building with $($build_node --version) (this takes a minute)"
+
+# Next.js production builds want ~2 GB of memory; small VPSes need a temporary
+# swapfile to get through one. Removed when the script exits.
+tmp_swap=""
+cleanup() {
+  if [ -n "$tmp_swap" ] && [ -e "$tmp_swap" ]; then
+    swapoff "$tmp_swap" 2>/dev/null || true
+    rm -f "$tmp_swap"
+  fi
+}
+trap cleanup EXIT
+mem_and_swap=$(free -m | awk '/^Mem:/ {m=$2} /^Swap:/ {s=$2} END {print m+s}')
+if [ "$mem_and_swap" -lt 3000 ]; then
+  log "adding a temporary 2G swapfile for the build (removed afterwards)"
+  tmp_swap="/pier-build.swap"
+  swapoff "$tmp_swap" 2>/dev/null || true
+  rm -f "$tmp_swap"
+  if fallocate -l 2G "$tmp_swap" 2>/dev/null || dd if=/dev/zero of="$tmp_swap" bs=1M count=2048 status=none; then
+    chmod 600 "$tmp_swap"
+    if ! swapon "$tmp_swap" 2>/dev/null; then
+      rm -f "$tmp_swap"
+      tmp_swap=""
+      log "swap could not be enabled (unsupported filesystem?) — continuing without it"
+    fi
+  else
+    tmp_swap=""
+  fi
+fi
+
+log "building with $($build_node --version) — this can take a few minutes"
 cd "$stage"
 # --ignore-scripts: better-sqlite3 ships prebuilt binaries for every platform
 # and loads them at runtime; without this, older npm auto-runs node-gyp for its
