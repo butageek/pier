@@ -2,21 +2,25 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Eye } from "lucide-react";
+import { Eye, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { IconPreview } from "@/components/icon-picker";
+import { TileDialog } from "@/components/tile-dialog";
 import type { EnrichedTile } from "@/lib/tiles";
 
 /** Details panel: the hidden links list with restore actions. */
 export function HiddenLinks({
   tiles,
+  groups,
   onChanged,
 }: {
   tiles: EnrichedTile[];
+  groups: string[];
   onChanged: () => void;
 }) {
   const [busy, setBusy] = useState<Set<number>>(new Set());
+  const [editing, setEditing] = useState<EnrichedTile | null>(null);
 
   const show = async (tile: EnrichedTile) => {
     setBusy((s) => new Set(s).add(tile.id));
@@ -93,13 +97,33 @@ export function HiddenLinks({
                   {t.group_name ? ` · ${t.group_name}` : ""}
                 </div>
               </div>
-              <Button size="sm" variant="outline" onClick={() => show(t)} disabled={busy.has(t.id)}>
-                <Eye data-icon="inline-start" className="size-3.5" /> Show
-              </Button>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setEditing(t)}
+                  aria-label={`Edit ${t.title}`}
+                >
+                  <Pencil data-icon="inline-start" className="size-3.5" /> Edit
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => show(t)} disabled={busy.has(t.id)}>
+                  <Eye data-icon="inline-start" className="size-3.5" /> Show
+                </Button>
+              </div>
             </li>
           ))}
         </ul>
       )}
+
+      <TileDialog
+        open={editing !== null}
+        onOpenChange={(o) => {
+          if (!o) setEditing(null);
+        }}
+        tile={editing}
+        groups={groups}
+        onSaved={onChanged}
+      />
 
       <p className="text-xs text-muted-foreground">
         Hidden links stay in sync with scans — their container keeps being tracked, they just don&apos;t

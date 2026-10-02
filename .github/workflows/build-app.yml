@@ -28,6 +28,7 @@ jobs:
       - name: Pack standalone bundle
         run: |
           cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public
           tar -czf pier-standalone.tar.gz -C .next/standalone .
 
       - name: Attach to the release

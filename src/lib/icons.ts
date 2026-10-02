@@ -17,6 +17,16 @@ const CDN_BASE = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/p
 const REFRESH_AFTER_MS = 7 * 24 * 60 * 60 * 1000; // 1 week
 const IN_MEMORY_TTL_MS = 60 * 60 * 1000; // 1 hour
 
+/**
+ * Icons shipped with Pier itself (served from public/, no CDN involved).
+ * Lets links pointing at Pier resolve to the real Pier mark — the CDN index
+ * doesn't know this project — and gives users a stable URL to grab it from
+ * (GET /pier.png, GET /pier.svg).
+ */
+const BUILTIN_ICONS: Record<string, string> = {
+  pier: "/pier.png",
+};
+
 type IconIndex = { fetchedAt: number; slugs: string[] };
 
 /** ~130 of the most common self-hosted services; used until the first online refresh. */
@@ -129,7 +139,7 @@ async function fetchIndexFromGithub(): Promise<IconIndex | null> {
 }
 
 export function iconUrl(slug: string): string {
-  return `${CDN_BASE}/${slug}.png`;
+  return BUILTIN_ICONS[slug] ?? `${CDN_BASE}/${slug}.png`;
 }
 
 /** Normalize any label into kebab-case for slug comparison. */
@@ -166,10 +176,10 @@ export async function resolveIcon(candidates: string[]): Promise<IconMatch | nul
     .map((c) => normalizeLabel(c))
     .filter((c) => c.length >= 2);
 
-  // 1) exact matches (after alias mapping)
+  // 1) exact matches (after alias mapping) — built-in icons win over the CDN
   for (const c of [...normed].reverse()) {
     for (const cand of [ALIASES[c] ?? c, c]) {
-      if (set.has(cand)) return { slug: cand, url: iconUrl(cand) };
+      if (cand in BUILTIN_ICONS || set.has(cand)) return { slug: cand, url: iconUrl(cand) };
     }
   }
 
@@ -209,14 +219,15 @@ export async function resolveIcon(candidates: string[]): Promise<IconMatch | nul
   return null;
 }
 
-/** Search available slugs for the icon picker. */
+/** Search available slugs for the icon picker (built-ins included first). */
 export async function searchSlugs(q: string, limit = 30): Promise<string[]> {
   const { slugs } = await getIconIndex();
+  const all = [...Object.keys(BUILTIN_ICONS), ...slugs];
   const query = normalizeLabel(q);
-  if (!query) return slugs.slice(0, limit);
+  if (!query) return all.slice(0, limit);
   const starts: string[] = [];
   const includes: string[] = [];
-  for (const s of slugs) {
+  for (const s of all) {
     if (s.startsWith(query)) starts.push(s);
     else if (s.includes(query)) includes.push(s);
     if (starts.length >= limit) break;

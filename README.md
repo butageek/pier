@@ -35,7 +35,9 @@ host Pier talks to directly. No SSH tunnels, no exposed Docker API.
 3. **Automatic icons** — links are matched against
    [dashboard-icons](https://github.com/homarr-labs/dashboard-icons) (PNG set) by container image name,
    link title or hostname, served from the jsDelivr CDN. You can always pick one manually from the
-   built-in searchable picker.
+   built-in searchable picker, or upload your own image. Pier also ships its own mark —
+   grab it at [`/pier.png`](public/pier.png) (512×512) or [`/pier.svg`](public/pier.svg) — and
+   links pointing at Pier resolve to it automatically.
 4. **Connectivity pings** — every link (manual or discovered) is probed server-side with a HEAD
    request; a single status dot on each card combines the picture: green = reachable, amber =
    container running but its endpoint isn't responding, gray = stopped, red = manual link down.

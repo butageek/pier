@@ -1,7 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -17,6 +19,15 @@ type Props = {
 type Result = { slug: string; url: string };
 
 const CDN = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/png";
+const UPLOAD_PREFIX = "upload:";
+const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
+
+/** Preview URL for any icon value — a dashboard-icons slug or an upload. */
+function iconValueUrl(value: string): string {
+  return value.startsWith(UPLOAD_PREFIX)
+    ? `/api/icons/file/${value.slice(UPLOAD_PREFIX.length)}`
+    : `${CDN}/${value}.png`;
+}
 
 function InitialsFallback({ label }: { label: string }) {
   const text = (label || "?").trim().slice(0, 2).toUpperCase();
@@ -47,7 +58,10 @@ export function IconPicker({ value, onChange, matchHints }: Props) {
   const [results, setResults] = useState<Result[]>([]);
   const [suggestion, setSuggestion] = useState<Result | null>(null);
   const [open, setOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
   const boxRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,8 +98,39 @@ export function IconPicker({ value, onChange, matchHints }: Props) {
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-  const chosen = value ? { slug: value, url: `${CDN}/${value}.png` } : null;
+  const chosen = value ? { slug: value, url: iconValueUrl(value) } : null;
   const preview = chosen ?? suggestion;
+  const isUploaded = value.startsWith(UPLOAD_PREFIX);
+
+  async function onUploadFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow picking the same file again
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setUploadError("Not an image file");
+      return;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setUploadError("Icon must be 2 MB or smaller");
+      return;
+    }
+    setUploading(true);
+    setUploadError("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/icons/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Upload failed");
+      onChange(data.icon);
+      setOpen(false);
+      setQuery("");
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   return (
     <div ref={boxRef} className="space-y-2">
@@ -94,29 +139,50 @@ export function IconPicker({ value, onChange, matchHints }: Props) {
           {preview ? <IconPreview key={preview.url} {...preview} label="?" /> : <InitialsFallback label="?" />}
         </div>
         <div className="min-w-0 flex-1">
-          <Input
-            placeholder="Search icons…"
-            value={query}
-            onFocus={() => setOpen(true)}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setOpen(true);
-            }}
-          />
-          <p className="mt-1.5 truncate text-xs text-muted-foreground">
-            {chosen ? (
-              <>
-                <button type="button" className="underline hover:text-foreground" onClick={() => onChange("")}>
-                  clear
-                </button>{" "}
-                to auto-match ({suggestion ? `auto: ${suggestion.slug}` : "no match yet"})
-              </>
-            ) : suggestion ? (
-              <>auto-match: {suggestion.slug}</>
-            ) : (
-              "no auto-match — search to pick one"
-            )}
-          </p>
+          <div className="flex gap-2">
+            <Input
+              className="min-w-0 flex-1"
+              placeholder="Search icons…"
+              value={query}
+              onFocus={() => setOpen(true)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setUploadError("");
+                setOpen(true);
+              }}
+            />
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onUploadFile} />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              title="Upload your own icon"
+              aria-label="Upload your own icon"
+              disabled={uploading}
+              onClick={() => fileRef.current?.click()}
+            >
+              <Upload className={uploading ? "animate-pulse" : ""} />
+            </Button>
+          </div>
+          {uploadError ? (
+            <p className="mt-1.5 text-xs text-destructive">{uploadError}</p>
+          ) : (
+            <p className="mt-1.5 truncate text-xs text-muted-foreground">
+              {chosen ? (
+                <>
+                  {isUploaded && "custom uploaded icon — "}
+                  <button type="button" className="underline hover:text-foreground" onClick={() => onChange("")}>
+                    clear
+                  </button>{" "}
+                  to auto-match ({suggestion ? `auto: ${suggestion.slug}` : "no match yet"})
+                </>
+              ) : suggestion ? (
+                `auto-match: ${suggestion.slug}`
+              ) : (
+                "no auto-match — search or upload an icon"
+              )}
+            </p>
+          )}
         </div>
       </div>
 

@@ -7,6 +7,16 @@ import { cn } from "cn";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -282,6 +292,7 @@ export function DeviceCard({
   onReorderEnd?: () => void;
 }) {
   const info = JSON.parse(device.info || "{}") as DeviceScanInfo;
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const isPve = device.type === "proxmox";
   const online = status?.online ?? true;
   const hasDocker = info.dockerVersion != null;
@@ -378,7 +389,7 @@ export function DeviceCard({
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onEdit(device)}>Edit</DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem variant="destructive" onClick={() => onRemove(device)}>
+                  <DropdownMenuItem variant="destructive" onClick={() => setConfirmRemove(true)}>
                     Remove
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -387,6 +398,29 @@ export function DeviceCard({
           </div>
         )}
       </div>
+
+      <AlertDialog open={confirmRemove} onOpenChange={setConfirmRemove}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {device.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes the device and its auto-discovered links from the dashboard.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                setConfirmRemove(false);
+                onRemove(device);
+              }}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="mt-3 space-y-2.5">
         <Bar pct={status?.cpuPct ?? null} label="CPU" />

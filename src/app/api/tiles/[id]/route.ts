@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { enrichTiles } from "@/lib/tiles";
+import { gcUploadIcon } from "@/lib/uploads";
 import type { Tile } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +38,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     .join(", ");
   db.prepare(`UPDATE tiles SET ${setSql} WHERE id = ?`).run(...Object.values(updates), tileId);
 
+  // The replaced icon's file becomes garbage if nothing else references it.
+  if (updates.icon !== undefined && updates.icon !== existing.icon) gcUploadIcon(existing.icon);
+
   const tile = db.prepare("SELECT * FROM tiles WHERE id = ?").get(tileId) as Tile;
   return NextResponse.json({ tile: (await enrichTiles([tile]))[0] });
 }
@@ -45,7 +49,10 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   const { id } = await ctx.params;
   const tileId = Number(id);
   if (!Number.isInteger(tileId)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
-  const result = getDb().prepare("DELETE FROM tiles WHERE id = ?").run(tileId);
-  if (result.changes === 0) return NextResponse.json({ error: "Tile not found" }, { status: 404 });
+  const db = getDb();
+  const row = db.prepare("SELECT icon FROM tiles WHERE id = ?").get(tileId) as { icon: string } | undefined;
+  if (!row) return NextResponse.json({ error: "Tile not found" }, { status: 404 });
+  db.prepare("DELETE FROM tiles WHERE id = ?").run(tileId);
+  gcUploadIcon(row.icon);
   return NextResponse.json({ ok: true });
 }

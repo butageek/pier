@@ -2,6 +2,7 @@ import tls from "node:tls";
 import { getDb } from "./db";
 import { agentContainers, agentInfo } from "./agent";
 import { imageCandidates, resolveIcon, iconUrl } from "./icons";
+import { isUploadIcon, uploadIconUrl } from "./uploads";
 import type { Device, DeviceScanInfo, ScanResult, Tile } from "./types";
 
 export type EnrichedTile = Tile & { iconUrl: string | null; auto: boolean };
@@ -17,7 +18,7 @@ export async function enrichTiles(tiles: Tile[]): Promise<EnrichedTile[]> {
         t.url,
       ].filter(Boolean);
       const match = t.icon
-        ? { slug: t.icon, url: iconUrl(t.icon) }
+        ? { slug: t.icon, url: isUploadIcon(t.icon) ? uploadIconUrl(t.icon) : iconUrl(t.icon) }
         : await resolveIcon(candidates);
       return {
         ...t,

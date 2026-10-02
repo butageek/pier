@@ -16,13 +16,15 @@ const SECTIONS: { id: SectionId; label: string; icon: typeof EyeOff }[] = [
 /** Settings hub: sections on the left, the selected section's panel on the right. */
 export default function SettingsPage() {
   const [tiles, setTiles] = useState<EnrichedTile[] | null>(null);
+  const [groupOrder, setGroupOrder] = useState<string[]>([]);
   const [section, setSection] = useState<SectionId>("hidden");
 
   const refresh = useCallback(async () => {
     try {
       const res = await fetch("/api/tiles");
-      const data = (await res.json()) as { tiles: EnrichedTile[] };
+      const data = (await res.json()) as { tiles: EnrichedTile[]; groupOrder: string[] };
       setTiles(data.tiles);
+      setGroupOrder(data.groupOrder ?? []);
     } catch {
       /* transient */
     }
@@ -81,7 +83,7 @@ export default function SettingsPage() {
             (hidden === null ? (
               <p className="text-sm text-muted-foreground">Loading…</p>
             ) : (
-              <HiddenLinks tiles={hidden} onChanged={refresh} />
+              <HiddenLinks tiles={hidden} groups={groupOrder} onChanged={refresh} />
             ))}
         </div>
       </div>
