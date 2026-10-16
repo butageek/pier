@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Left Piling / Stem of 'P' -->
+  <rect x="17" y="18" width="6" height="28" rx="3" fill="currentColor"/>
+  <!-- Arched Mooring Deck (P-loop) -->
+  <path
+    d="M 17 21 H 36 C 43 21 47 25 47 31 C 47 37 43 41 36 41 H 17"
+    stroke="currentColor"
+    stroke-width="6"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <!-- Mooring Bollard Dot -->
+  <circle cx="34" cy="31" r="3" fill="#22d3ee"/>
+  <!-- Right Supporting Piling -->
+  <rect x="37" y="41" width="5" height="6" rx="2.5" fill="currentColor"/>
+  <!-- Wave -->
+  <path
+    d="M 14 51 Q 23 46 32 51 T 50 51"
+    stroke="currentColor"
+    stroke-width="3.5"
+    stroke-linecap="round"
+  />
+</svg>

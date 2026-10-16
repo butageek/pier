@@ -8,7 +8,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -49,73 +49,447 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  /* Default light fallback / Bauhaus Studio */
+  --background: #f9f8f6;
+  --foreground: #121316;
+  --card: #ffffff;
+  --card-foreground: #121316;
+  --popover: #ffffff;
+  --popover-foreground: #121316;
+  --primary: #1e40af;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f3ef;
+  --secondary-foreground: #121316;
+  --muted: #f4f3ef;
+  --muted-foreground: #595d66;
+  --accent: #f4f3ef;
+  --accent-foreground: #1e40af;
+  --destructive: #e11d48;
+  --border: #121316;
+  --input: #121316;
+  --ring: #1e40af;
+  --accent-gradient: linear-gradient(135deg, #1e40af 0%, #facc15 100%);
+  --logo-1: #1e40af;
+  --logo-2: #e11d48;
+  --ambient-1: rgba(30, 64, 175, 0.05);
+  --ambient-2: rgba(250, 204, 21, 0.04);
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+/* 1. Bauhaus Modern / Editorial Studio (Light Theme 1) */
+html[data-theme="bauhaus-studio"],
+html:not(.dark):not([data-theme]) {
+  --radius: 0.75rem;
+  --background: #f9f8f6;
+  --foreground: #121316;
+  --card: #ffffff;
+  --card-foreground: #121316;
+  --popover: #ffffff;
+  --popover-foreground: #121316;
+  --primary: #1e40af;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f3ef;
+  --secondary-foreground: #121316;
+  --muted: #f4f3ef;
+  --muted-foreground: #595d66;
+  --accent: #f4f3ef;
+  --accent-foreground: #1e40af;
+  --destructive: #e11d48;
+  --border: #121316;
+  --input: #121316;
+  --ring: #1e40af;
+  --accent-gradient: linear-gradient(135deg, #1e40af 0%, #facc15 100%);
+  --logo-1: #1e40af;
+  --logo-2: #e11d48;
+  --ambient-1: rgba(30, 64, 175, 0.05);
+  --ambient-2: rgba(250, 204, 21, 0.04);
 }
+
+/* 2. Technical Drafting Vellum / CAD Blueprint (Light Theme 2) */
+html[data-theme="cad-blueprint"] {
+  --radius: 0.25rem;
+  --background: #eef5fc;
+  --foreground: #0f172a;
+  --card: #f8fbff;
+  --card-foreground: #0f172a;
+  --popover: #f8fbff;
+  --popover-foreground: #0f172a;
+  --primary: #1d4ed8;
+  --primary-foreground: #ffffff;
+  --secondary: #e0edfb;
+  --secondary-foreground: #0f172a;
+  --muted: #e0edfb;
+  --muted-foreground: #475569;
+  --accent: #e0edfb;
+  --accent-foreground: #1d4ed8;
+  --destructive: #dc2626;
+  --border: rgba(29, 78, 216, 0.25);
+  --input: rgba(29, 78, 216, 0.35);
+  --ring: #1d4ed8;
+  --accent-gradient: linear-gradient(135deg, #1d4ed8 0%, #0284c7 100%);
+  --logo-1: #1d4ed8;
+  --logo-2: #0284c7;
+  --ambient-1: rgba(29, 78, 216, 0.06);
+  --ambient-2: rgba(2, 132, 199, 0.04);
+}
+
+/* 3. Creative Pinboard / Sticky Notes Atelier (Light Theme 3) */
+html[data-theme="pinboard-atelier"] {
+  --radius: 0.75rem;
+  --background: #f4eee2;
+  --foreground: #292524;
+  --card: #ffffff;
+  --card-foreground: #292524;
+  --popover: #ffffff;
+  --popover-foreground: #292524;
+  --primary: #ea580c;
+  --primary-foreground: #ffffff;
+  --secondary: #fcf9f2;
+  --secondary-foreground: #292524;
+  --muted: #f5ede1;
+  --muted-foreground: #57534e;
+  --accent: #f5ede1;
+  --accent-foreground: #ea580c;
+  --destructive: #dc2626;
+  --border: #ebd9c8;
+  --input: #ebd9c8;
+  --ring: #ea580c;
+  --accent-gradient: linear-gradient(135deg, #ea580c 0%, #facc15 100%);
+  --logo-1: #ea580c;
+  --logo-2: #facc15;
+  --ambient-1: rgba(234, 88, 12, 0.05);
+  --ambient-2: rgba(250, 204, 21, 0.04);
+}
+
+/* 4. Bauhaus Nocturne (Dark Theme 1 - Default Dark) */
+.dark,
+html[data-theme="bauhaus-dark"],
+html.dark:not([data-theme]) {
+  --radius: 0.75rem;
+  --background: #121316;
+  --foreground: #f9f8f6;
+  --card: #1c1d22;
+  --card-foreground: #f9f8f6;
+  --popover: #1c1d22;
+  --popover-foreground: #f9f8f6;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #252830;
+  --secondary-foreground: #f9f8f6;
+  --muted: #252830;
+  --muted-foreground: #9ca3af;
+  --accent: #252830;
+  --accent-foreground: #3b82f6;
+  --destructive: #f43f5e;
+  --border: #f9f8f6;
+  --input: #f9f8f6;
+  --ring: #3b82f6;
+  --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #facc15 100%);
+  --logo-1: #3b82f6;
+  --logo-2: #facc15;
+  --ambient-1: rgba(59, 130, 246, 0.08);
+  --ambient-2: rgba(250, 204, 21, 0.06);
+}
+
+/* 5. CAD Night Schematic (Dark Theme 2) */
+html[data-theme="cad-dark"] {
+  --radius: 0.25rem;
+  --background: #070d19;
+  --foreground: #f0f6fc;
+  --card: #0d172a;
+  --card-foreground: #f0f6fc;
+  --popover: #0d172a;
+  --popover-foreground: #f0f6fc;
+  --primary: #38bdf8;
+  --primary-foreground: #070d19;
+  --secondary: #132238;
+  --secondary-foreground: #f0f6fc;
+  --muted: #132238;
+  --muted-foreground: #7dd3fc;
+  --accent: #132238;
+  --accent-foreground: #38bdf8;
+  --destructive: #f87171;
+  --border: rgba(56, 189, 248, 0.28);
+  --input: rgba(56, 189, 248, 0.35);
+  --ring: #38bdf8;
+  --accent-gradient: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+  --logo-1: #38bdf8;
+  --logo-2: #818cf8;
+  --ambient-1: rgba(56, 189, 248, 0.08);
+  --ambient-2: rgba(129, 140, 248, 0.06);
+}
+
+/* 6. Pinboard Midnight (Dark Theme 3) */
+html[data-theme="pinboard-dark"] {
+  --radius: 0.75rem;
+  --background: #181513;
+  --foreground: #f5ede3;
+  --card: #25201c;
+  --card-foreground: #f5ede3;
+  --popover: #25201c;
+  --popover-foreground: #f5ede3;
+  --primary: #fb923c;
+  --primary-foreground: #181513;
+  --secondary: #322b26;
+  --secondary-foreground: #f5ede3;
+  --muted: #322b26;
+  --muted-foreground: #a89f91;
+  --accent: #322b26;
+  --accent-foreground: #fb923c;
+  --destructive: #f87171;
+  --border: #423932;
+  --input: #423932;
+  --ring: #fb923c;
+  --accent-gradient: linear-gradient(135deg, #fb923c 0%, #facc15 100%);
+  --logo-1: #fb923c;
+  --logo-2: #facc15;
+  --ambient-1: rgba(251, 146, 60, 0.08);
+  --ambient-2: rgba(250, 204, 21, 0.06);
+}
+
+.bg-accent-gradient {
+  background-image: var(--accent-gradient);
+}
+
+/* --- Theme-Specific Background Textures --- */
+html[data-theme="bauhaus-studio"] body {
+  background-image: radial-gradient(#121316 0.75px, transparent 0.75px);
+  background-size: 24px 24px;
+  background-attachment: fixed;
+}
+
+html[data-theme="bauhaus-dark"] body,
+html.dark:not([data-theme]) body {
+  background-image: radial-gradient(rgba(249, 248, 246, 0.15) 0.75px, transparent 0.75px);
+  background-size: 24px 24px;
+  background-attachment: fixed;
+}
+
+html[data-theme="cad-blueprint"] body {
+  background-image: 
+    linear-gradient(rgba(29, 78, 216, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(29, 78, 216, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(29, 78, 216, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(29, 78, 216, 0.03) 1px, transparent 1px);
+  background-size: 80px 80px, 80px 80px, 16px 16px, 16px 16px;
+  background-attachment: fixed;
+}
+
+html[data-theme="cad-dark"] body {
+  background-image: 
+    linear-gradient(rgba(56, 189, 248, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 189, 248, 0.12) 1px, transparent 1px),
+    linear-gradient(rgba(56, 189, 248, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 189, 248, 0.04) 1px, transparent 1px);
+  background-size: 80px 80px, 80px 80px, 16px 16px, 16px 16px;
+  background-attachment: fixed;
+}
+
+html[data-theme="pinboard-atelier"] body {
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(217, 119, 6, 0.04), transparent 60%),
+    radial-gradient(#d6c7b2 0.8px, transparent 0.8px);
+  background-size: 100% 100%, 20px 20px;
+  background-attachment: fixed;
+}
+
+html[data-theme="pinboard-dark"] body {
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(251, 146, 60, 0.06), transparent 60%),
+    radial-gradient(#3a322b 0.8px, transparent 0.8px);
+  background-size: 100% 100%, 20px 20px;
+  background-attachment: fixed;
+}
+
+/* --- Theme-Specific Card & Component Styling --- */
+
+/* 1. Bauhaus Modern / Editorial Studio */
+html[data-theme="bauhaus-studio"] .theme-card {
+  border: 2px solid #121316 !important;
+  box-shadow: 4px 4px 0px #121316 !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+}
+html[data-theme="bauhaus-studio"] a.theme-card:hover {
+  transform: translate(-2px, -2px) !important;
+  box-shadow: 6px 6px 0px #121316 !important;
+}
+html[data-theme="bauhaus-studio"] header {
+  border-bottom: 2px solid #121316 !important;
+  box-shadow: 0 4px 0px rgba(18, 19, 22, 0.06);
+}
+html[data-theme="bauhaus-studio"] .category-tab-btn {
+  border: 1.5px solid #121316 !important;
+  box-shadow: 2px 2px 0px #121316;
+}
+html[data-theme="bauhaus-studio"] .meter-track {
+  border: 1.5px solid #121316 !important;
+  border-radius: 4px !important;
+  background: #f4f3ef !important;
+}
+
+/* 4. Bauhaus Nocturne (Dark) */
+html[data-theme="bauhaus-dark"] .theme-card,
+html.dark:not([data-theme]) .theme-card {
+  border: 2px solid #f9f8f6 !important;
+  box-shadow: 4px 4px 0px #facc15 !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+}
+html[data-theme="bauhaus-dark"] a.theme-card:hover,
+html.dark:not([data-theme]) a.theme-card:hover {
+  transform: translate(-2px, -2px) !important;
+  box-shadow: 6px 6px 0px #facc15 !important;
+}
+html[data-theme="bauhaus-dark"] header,
+html.dark:not([data-theme]) header {
+  border-bottom: 2px solid #f9f8f6 !important;
+  box-shadow: 0 4px 0px rgba(250, 204, 21, 0.2);
+}
+html[data-theme="bauhaus-dark"] .category-tab-btn,
+html.dark:not([data-theme]) .category-tab-btn {
+  border: 1.5px solid #f9f8f6 !important;
+  box-shadow: 2px 2px 0px #facc15;
+}
+html[data-theme="bauhaus-dark"] .meter-track,
+html.dark:not([data-theme]) .meter-track {
+  border: 1.5px solid #f9f8f6 !important;
+  border-radius: 4px !important;
+  background: #252830 !important;
+}
+
+/* 2. Technical Drafting Vellum / CAD Blueprint & CAD Night Schematic */
+html[data-theme="cad-blueprint"] .theme-card,
+html[data-theme="cad-dark"] .theme-card {
+  position: relative;
+}
+
+html[data-theme="cad-blueprint"] .theme-card {
+  border: 1.5px solid rgba(29, 78, 216, 0.28) !important;
+}
+html[data-theme="cad-dark"] .theme-card {
+  border: 1.5px solid rgba(56, 189, 248, 0.35) !important;
+}
+
+html[data-theme="cad-blueprint"] .theme-card::before,
+html[data-theme="cad-blueprint"] .theme-card::after,
+html[data-theme="cad-dark"] .theme-card::before,
+html[data-theme="cad-dark"] .theme-card::after {
+  content: '+';
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  pointer-events: none;
+  line-height: 1;
+}
+html[data-theme="cad-blueprint"] .theme-card::before,
+html[data-theme="cad-blueprint"] .theme-card::after {
+  color: #1d4ed8;
+}
+html[data-theme="cad-dark"] .theme-card::before,
+html[data-theme="cad-dark"] .theme-card::after {
+  color: #38bdf8;
+}
+html[data-theme="cad-blueprint"] .theme-card::before,
+html[data-theme="cad-dark"] .theme-card::before { top: 3px; left: 5px; }
+html[data-theme="cad-blueprint"] .theme-card::after,
+html[data-theme="cad-dark"] .theme-card::after { top: 3px; right: 5px; }
+
+html[data-theme="cad-blueprint"] a.theme-card:hover {
+  border-color: #1d4ed8 !important;
+  box-shadow: 0 8px 24px rgba(29, 78, 216, 0.12) !important;
+}
+html[data-theme="cad-dark"] a.theme-card:hover {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 8px 24px rgba(56, 189, 248, 0.25) !important;
+}
+
+html[data-theme="cad-blueprint"] .meter-track {
+  border: 1px solid rgba(29, 78, 216, 0.3) !important;
+  border-radius: 2px !important;
+  background: #e0edfb !important;
+}
+html[data-theme="cad-blueprint"] .meter-fill {
+  background: #1d4ed8 !important;
+  border-radius: 1px !important;
+}
+
+html[data-theme="cad-dark"] .meter-track {
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  border-radius: 2px !important;
+  background: #132238 !important;
+}
+html[data-theme="cad-dark"] .meter-fill {
+  background: #38bdf8 !important;
+  border-radius: 1px !important;
+}
+
+/* 3. Creative Pinboard / Sticky Notes Atelier (Light) */
+html[data-theme="pinboard-atelier"] .theme-card {
+  border: 1px solid #ebd9c8 !important;
+  box-shadow: 0 8px 20px -4px rgba(78, 62, 45, 0.12), 0 3px 6px -2px rgba(78, 62, 45, 0.06) !important;
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+html[data-theme="pinboard-atelier"] a.theme-card:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 14px 30px -6px rgba(78, 62, 45, 0.2) !important;
+}
+html[data-theme="pinboard-atelier"] .meter-track {
+  background: #ebd9c8 !important;
+}
+
+/* 6. Pinboard Midnight (Dark) */
+html[data-theme="pinboard-dark"] .theme-card {
+  border: 1px solid #423932 !important;
+  box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.4), 0 3px 6px -2px rgba(0, 0, 0, 0.25) !important;
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+html[data-theme="pinboard-dark"] a.theme-card:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 14px 30px -6px rgba(0, 0, 0, 0.6) !important;
+}
+html[data-theme="pinboard-dark"] .meter-track {
+  background: #322b26 !important;
+}
+
+/* Organic sticky note tilts for Pinboard Atelier & Pinboard Midnight */
+.pinboard-tilt-0 {
+  transform: rotate(-1.2deg);
+}
+.pinboard-tilt-1 {
+  transform: rotate(1deg);
+}
+.pinboard-tilt-2 {
+  transform: rotate(-1.5deg);
+}
+.pinboard-tilt-3 {
+  transform: rotate(1.2deg);
+}
+
+.pinboard-tilt-0:hover,
+.pinboard-tilt-1:hover,
+.pinboard-tilt-2:hover,
+.pinboard-tilt-3:hover {
+  transform: rotate(0deg) scale(1.02);
+}
+
+.washi-tape-strip {
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 72px;
+  height: 16px;
+  background: rgba(250, 204, 21, 0.7);
+  backdrop-filter: blur(2px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+  border-radius: 1px;
+  z-index: 5;
+}
+
 
 @layer base {
   * {
@@ -123,6 +497,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
   html {
     @apply font-sans;

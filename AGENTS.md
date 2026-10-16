@@ -58,9 +58,13 @@ PIER_KEY=x node agent/index.mjs   # run the agent standalone (zero deps)
 | `src/lib/agent.ts` | client for pier-agent endpoints (info/containers/stats) |
 | `src/lib/proxmox.ts` | Proxmox VE API client (token auth, self-signed OK) + PVE scan/live-status (per-guest summary) |
 | `src/lib/tiles.ts` | scan reconcile shared by docker + proxmox scanners: upsert links per (device, container, URL), prune gone ones |
+| `src/lib/theme.ts` | two-tier theme management (mode + light/dark preferences, anti-FOUC script, storage keys) |
 | `src/lib/icons.ts` | dashboard-icons slug index (disk-cached, weekly refresh) + matcher |
-| `src/components/dashboard.tsx` | dashboard + layout-edit drag & drop (FLIP animations in `use-flip.ts`; SWAP_COOLDOWN_MS rationale in situ) |
-| `src/components/*` | device card/form, add + tile dialogs, icon/group pickers, `logo.tsx` (shared with `src/app/icon.svg`) |
+| `src/components/dashboard.tsx` | dashboard + category filter tabs + layout-edit drag & drop (FLIP animations in `use-flip.ts`; SWAP_COOLDOWN_MS rationale in situ) |
+| `src/components/theme-toggle.tsx` | header dropdown menu for instant mode (auto/dark/light) and theme switching |
+| `src/components/theme-settings.tsx` | appearance settings panel with live theme cards in the settings hub |
+| `src/components/*` | device card/form, add + tile dialogs, icon/group pickers, `logo.tsx` (brand mark, supports `full` and `mark` variants) |
+| `src/app/icon.svg` · `apple-icon.svg` | Next.js vector favicon and Apple touch icon routes (The Monogram P-Dock) |
 | `agent/index.mjs` | the whole agent: token auth, `/info` `/containers` `/stats` `/container-stats` `/health` |
 | `install.sh` · `Dockerfile` · `compose.yaml` | the three deployment paths (see above) |
 
@@ -86,6 +90,11 @@ PIER_KEY=x node agent/index.mjs   # run the agent standalone (zero deps)
   with separation OFF (one grant, token inherits PVEAuditor).
 - **Icons**: matched server-side in `resolveIcon` (exact → alias → token →
   substring, min length 4), served from the jsDelivr CDN — never downloaded into the repo.
+- **Brand & Project Icon**: Pier's official mark is **The Monogram P-Dock** (an architectural capital 'P'
+  formed by an arched mooring deck and pilings standing over an ocean tide wave). Lives as a theme-adaptive
+  React component in `src/components/logo.tsx` (supports `variant="full"` with squircle and `variant="mark"` transparent),
+  served natively by Next.js at `src/app/icon.svg` & `src/app/apple-icon.svg`, and exported in `public/icons/`
+  across standard PNG resolutions (16px to 512px) and multi-resolution `favicon.ico`.
 - **React 19 effects**: don't guard setState with a `mounted` ref — StrictMode's
   double-mount permanently falsifies it and state silently stops updating.
   Post-unmount setState is a safe no-op.
@@ -100,6 +109,17 @@ PIER_KEY=x node agent/index.mjs   # run the agent standalone (zero deps)
   mismatches the server HTML and remounts the page.
 - **Native `<datalist>`** popups render detached from dialogs in some browsers —
   use the anchored combobox pattern (`group-select.tsx`) instead.
+- **Themes**: Two-tier theme architecture (`pier-mode`: `system` | `dark` | `light`,
+  `pier-dark-theme`: `bauhaus-dark` | `cad-dark` | `pinboard-dark`,
+  `pier-light-theme`: `bauhaus-studio` | `cad-blueprint` | `pinboard-atelier`).
+  In `system` mode, `computeEffectiveTheme()` reacts live to OS `prefers-color-scheme` to activate the user's
+  preferred dark or light theme. An inline `<script>` in `<head>` (`src/app/layout.tsx`) sets
+  `document.documentElement.dataset.theme` and toggles `.dark` synchronously before first paint
+  to eliminate flash of unstyled content (FOUC). Dedicated design treatments apply distinct borders,
+  shadows, corner marks, and meter bars per theme.
+- **Search & Filters**: The header search input (`/` shortcut) integrates with Dashboard state
+  to filter links by title, url, description, and group. In edit layout mode, search and category
+  pill filters are temporarily deactivated to maintain drag-and-drop reordering fidelity.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

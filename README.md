@@ -35,9 +35,12 @@ host Pier talks to directly. No SSH tunnels, no exposed Docker API.
 3. **Automatic icons** — links are matched against
    [dashboard-icons](https://github.com/homarr-labs/dashboard-icons) (PNG set) by container image name,
    link title or hostname, served from the jsDelivr CDN. You can always pick one manually from the
-   built-in searchable picker, or upload your own image. Pier also ships its own mark —
-   grab it at [`/pier.png`](public/pier.png) (512×512) or [`/pier.svg`](public/pier.svg) — and
-   links pointing at Pier resolve to it automatically.
+   built-in searchable picker, or upload your own image. Pier also ships its own brand mark —
+   *The Monogram P-Dock* (geometric 'P' forming a harbor pier with a container cargo dot) —
+   available in high-res PNG at [`/pier.png`](public/pier.png) (512×512), scalable SVG at
+   [`/pier.svg`](public/pier.svg), standalone mark at [`/logo-mark.svg`](public/logo-mark.svg),
+   full lockup at [`/logo-horizontal.svg`](public/logo-horizontal.svg), and full platform icon
+   suite in [`public/icons/`](public/icons/) — and links pointing at Pier resolve to it automatically.
 4. **Connectivity pings** — every link (manual or discovered) is probed server-side with a HEAD
    request; a single status dot on each card combines the picture: green = reachable, amber =
    container running but its endpoint isn't responding, gray = stopped, red = manual link down.
@@ -47,6 +50,15 @@ host Pier talks to directly. No SSH tunnels, no exposed Docker API.
    the groups themselves, and the device cards. Cards slide aside with a live preview as you
    drag; **Done** keeps the arrangement, **Cancel** restores what you started with. Everything
    persists across reloads, rescans and reboots.
+6. **Instant search & category filters** — quick top-bar search (press `/` or `Ctrl/Cmd+K` to focus)
+   filters links across titles, URLs, descriptions, and groups in real time. Category pill tabs
+   provide instant group filtering without visual clutter.
+7. **Themes & Appearance studio** — clean two-tier theme system supporting **Auto (System)**,
+   **Dark**, and **Light** modes with curated, distinct palettes:
+   - **Dark**: *Bauhaus Nocturne* (constructivist dark gallery with stark outlines, canary block shadows, electric cobalt accents, and primary contrast), *CAD Night Schematic* (midnight drafting blueprint with glowing cyan grid lines, precision crosshairs, and DWG notation), and *Pinboard Midnight* (night workshop bulletin board with dark espresso cork canvas, translucent washi tape, kraft memo cards, and sticky tilts).
+   - **Light**: *Bauhaus Studio* (architectural graphic studio with 2px outlines & hard block drop-shadows), *CAD Blueprint* (technical drafting vellum on sky grid with precision crosshairs & dimension lines), and *Pinboard Atelier* (creative workshop bulletin board with washi tape headers & paper shadows).
+   - When set to Auto, Pier dynamically switches between your chosen light and dark preferences
+     following your OS scheme, with synchronous `<head>` script execution eliminating theme flash (FOUC). Dedicated CSS treatments apply authentic borders, shadows, corner markers, and progress meters per theme.
 
 ## Getting started
 
@@ -215,8 +227,9 @@ src/lib/proxmox.ts  Proxmox VE API client: token auth, LXC web-port link discove
 src/lib/icons.ts    dashboard-icons slug index (GitHub trees API → data/icon-index.json, weekly refresh,
                     bundled seed fallback) + matcher: exact → alias → token → substring
 src/lib/tiles.ts    scan reconcile: upsert links per (device, container, endpoint URL), prune gone ones
+src/lib/theme.ts    two-tier theme state (mode + light/dark palettes), anti-FOUC script, storage sync
 src/app/api/*       REST routes: links CRUD, devices CRUD, scan, live status, link health probes, icon search/resolve
-src/components/*    dashboard grid, device cards, unified Add dialog (link/device) + icon picker
+src/components/*    dashboard grid, device cards, category tabs, theme toggle & settings, Add dialog + icon picker
 ```
 
 Everything is stored locally in `data/` (gitignored): `pier.db` (SQLite) and the
@@ -232,6 +245,6 @@ Design choices kept intentionally small for the MVP:
 ## Roadmap (post-MVP ideas)
 
 - Background auto-scan interval per device
-- Drag-and-drop link ordering, per-group layouts
-- Per-container CPU/RAM popovers
-- Multi-user/auth, Docker labels as link config hints
+- Per-container CPU/RAM metric popovers
+- Multi-user / auth support
+- Docker labels as link config hints (custom title, icon, group, hidden)

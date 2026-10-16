@@ -25,18 +25,28 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { formatBytes, formatUptime, osLabel, timeAgo } from "@/lib/format";
 import type { ContainerStatus, DeviceScanInfo, DeviceStatus, PveGuestStatus, SafeDevice } from "@/lib/types";
+import type { ConcreteTheme } from "@/lib/theme";
+import { PINBOARD_TAPES } from "@/components/tile-card";
 
 function Bar({ pct, label }: { pct: number | null; label: string }) {
   const v = pct == null ? 0 : Math.min(pct, 100);
-  const color = v < 60 ? "bg-emerald-500" : v < 85 ? "bg-amber-500" : "bg-red-500";
+
+  const color =
+    v < 60
+      ? "bg-gradient-to-r from-emerald-500 to-teal-400"
+      : v < 85
+        ? "bg-gradient-to-r from-amber-500 to-orange-400"
+        : "bg-gradient-to-r from-rose-500 to-red-500";
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       <div className="flex items-baseline justify-between text-xs">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="tabular-nums">{pct == null ? "—" : `${pct}%`}</span>
+        <span className="text-muted-foreground/90 font-medium">{label}</span>
+        <span className="tabular-nums font-mono text-[11px] font-semibold text-foreground/90">
+          {pct == null ? "—" : `${Math.round(pct * 10) / 10}%`}
+        </span>
       </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-        <div className={`h-full rounded-full ${color} transition-all duration-500`} style={{ width: `${v}%` }} />
+      <div className="meter-track h-1.5 overflow-hidden rounded-full bg-muted/60 border border-border/20">
+        <div className={`meter-fill h-full rounded-full ${color} transition-all duration-500 shadow-sm`} style={{ width: `${v}%` }} />
       </div>
     </div>
   );
@@ -122,7 +132,7 @@ function CursorPopup({
         aria-haspopup="dialog"
         aria-expanded={pinned || pos != null}
         title={title}
-        className="inline-flex cursor-help items-center gap-1 underline decoration-dotted underline-offset-4"
+        className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-primary/25 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary transition-colors hover:border-primary/50 hover:bg-primary/20 hover:text-primary"
         onMouseEnter={cancelHide}
         onMouseMove={
           pinned
@@ -195,7 +205,7 @@ function GuestRow({
           href={href}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex min-w-0 items-center gap-1 font-medium text-cyan-600 hover:underline dark:text-cyan-400"
+          className="inline-flex min-w-0 items-center gap-1 font-medium text-primary hover:underline"
         >
           <span className="truncate">{guest.name}</span>
           <ArrowUpRight className="size-3 shrink-0" aria-hidden />
@@ -234,7 +244,7 @@ function ContainerRow({ container, href }: { container: ContainerStatus; href?: 
           href={href}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex min-w-0 items-center gap-1 font-medium text-cyan-600 hover:underline dark:text-cyan-400"
+          className="inline-flex min-w-0 items-center gap-1 font-medium text-primary hover:underline"
         >
           <span className="truncate">{container.name}</span>
           <ArrowUpRight className="size-3 shrink-0" aria-hidden />
@@ -261,6 +271,7 @@ function ContainerRow({ container, href }: { container: ContainerStatus; href?: 
 export function DeviceCard({
   device,
   status,
+  theme,
   guestLinks,
   onScan,
   onEdit,
@@ -275,6 +286,8 @@ export function DeviceCard({
 }: {
   device: SafeDevice;
   status: DeviceStatus | null;
+  /** Active theme to render theme-specific layout treatments */
+  theme?: ConcreteTheme;
   /** Proxmox only: "deviceId|guestId" -> discovered web URL, for clickable guest names. */
   guestLinks?: Record<string, string>;
   onScan: (device: SafeDevice) => void;
@@ -308,16 +321,26 @@ export function DeviceCard({
     onReorderOver?.(device, e.timeStamp);
   };
 
+  const isPinboard = theme === "pinboard-atelier" || theme === "pinboard-dark";
+  const tiltClass =
+    isPinboard && !reordering
+      ? `pinboard-tilt-${device.id % 4} transition-transform duration-200 ease-out`
+      : "";
+
   return (
     <div
       ref={nodeRef}
+      data-device-card=""
       title={reordering ? "Drag to reorder" : undefined}
       className={cn(
-        "group relative rounded-xl border bg-card p-4 transition-[opacity,transform,scale] duration-200 ease-out",
+        "theme-card group relative rounded-xl border bg-card/90 backdrop-blur-sm p-4 transition-[opacity,transform,scale] duration-200 ease-out hover:border-primary/40",
+        !isPinboard && "overflow-hidden",
+        isPinboard && "pt-5",
         reordering
-          ? "cursor-grab border-dashed border-border select-none active:cursor-grabbing"
+          ? "cursor-grab border-dashed border-primary/50 select-none active:cursor-grabbing"
           : "border-border/70",
-        isDragging && "scale-95 opacity-40"
+        isDragging && "scale-95 opacity-40",
+        tiltClass
       )}
       draggable={reordering}
       onDragStart={
@@ -334,12 +357,26 @@ export function DeviceCard({
       onDrop={reordering ? (e) => e.preventDefault() : undefined}
       onDragEnd={reordering ? () => onReorderEnd?.() : undefined}
     >
+      {isPinboard && (
+        <div
+          className="washi-tape-strip"
+          style={{
+            backgroundColor: PINBOARD_TAPES[device.id % PINBOARD_TAPES.length],
+            width: "84px",
+          }}
+        />
+      )}
+      {!isPinboard && (
+        <div className="absolute inset-x-0 top-0 h-0.5 bg-accent-gradient opacity-80" />
+      )}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             {reordering && <GripVertical className="size-3.5 shrink-0 text-muted-foreground/60" />}
-            <Server className="size-4 shrink-0 text-cyan-400" />
-            <span className="truncate text-sm font-semibold">{device.name}</span>
+            <Server className="size-4 shrink-0 text-primary" />
+            <span className="truncate text-sm font-semibold">
+              {device.name}
+            </span>
             <Badge variant={online ? "secondary" : "destructive"} className="px-1.5 text-[10px]">
               {online ? (isPve ? "pve" : "agent") : "offline"}
             </Badge>
@@ -359,6 +396,16 @@ export function DeviceCard({
               </>
             )}
           </p>
+          {theme === "cad-blueprint" && (
+            <div className="font-mono text-[9px] text-blue-700/80 mt-1 truncate">
+              |&lt;--- SCHEMATIC: {info.cpuCount ?? "?"} CORES · {device.host} ---&gt;|
+            </div>
+          )}
+          {theme === "cad-dark" && (
+            <div className="font-mono text-[9px] text-sky-400/80 mt-1 truncate">
+              |&lt;--- SCHEMATIC: {info.cpuCount ?? "?"} CORES · {device.host} ---&gt;|
+            </div>
+          )}
         </div>
         {!reordering && (
           <div className="flex items-center gap-0.5">

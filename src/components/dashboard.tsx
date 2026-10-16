@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type DragEvent } from "react";
 import { createPortal } from "react-dom";
-import { Check, GripVertical, PencilLine, Plus, RotateCw, X } from "lucide-react";
+import { Check, GripVertical, PencilLine, Plus, RotateCw, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddDialog } from "@/components/add-dialog";
 import { DeviceEditDialog } from "@/components/device-edit-dialog";
@@ -16,6 +17,19 @@ import { useFlipReorder } from "@/components/use-flip";
 import { Countdown } from "@/components/use-countdown";
 import type { EnrichedTile } from "@/lib/tiles";
 import type { DeviceStatus, SafeDevice, TileHealth } from "@/lib/types";
+import {
+  subscribeTheme,
+  getThemeConfigSnapshot,
+  type ThemeConfig,
+} from "@/lib/theme";
+
+const SERVER_THEME_CONFIG: ThemeConfig = {
+  mode: "system",
+  darkTheme: "bauhaus-dark",
+  lightTheme: "bauhaus-studio",
+  effectiveTheme: "bauhaus-dark",
+  isDark: true,
+};
 
 type TilesResponse = { tiles: EnrichedTile[]; groupOrder?: string[] };
 type DevicesResponse = { devices: SafeDevice[] };
@@ -96,6 +110,32 @@ export function Dashboard() {
   const [dragTileId, setDragTileId] = useState<number | null>(null);
   const [dragGroup, setDragGroup] = useState<string | null>(null);
   const [dragDeviceId, setDragDeviceId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState<string>("all");
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  const themeConfig = useSyncExternalStore(subscribeTheme, getThemeConfigSnapshot, () => SERVER_THEME_CONFIG);
+  const theme = themeConfig.effectiveTheme;
+
+  // Keyboard shortcut '/' to focus search, and 'Escape' to clear
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (editLayout) return;
+      if (
+        e.key === "/" &&
+        document.activeElement !== searchInputRef.current &&
+        !(document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement)
+      ) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      } else if (e.key === "Escape" && document.activeElement === searchInputRef.current) {
+        setSearchQuery("");
+        searchInputRef.current?.blur();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [editLayout]);
   const dragTileRef = useRef<number | null>(null);
   const dragGroupRef = useRef<string | null>(null);
   const dragDeviceRef = useRef<number | null>(null);
@@ -388,6 +428,8 @@ export function Dashboard() {
   };
 
   const startLayoutEdit = () => {
+    setSearchQuery("");
+    setActiveCategory("all");
     layoutSnapshotRef.current = {
       tileIds: (tilesRef.current ?? []).map((t) => t.id),
       groups: groupOrderRef.current.slice(),
@@ -414,7 +456,37 @@ export function Dashboard() {
 
   const groups = tiles ? [...new Set(tiles.filter((t) => !t.auto).map((t) => t.group_name).filter(Boolean))] : [];
   const visible = tiles?.filter((t) => !t.hidden) ?? null;
-  const grouped = visible ? groupTiles(visible, groupOrder) : [];
+
+  const allVisibleGroups = useMemo(() => {
+    if (!visible) return [];
+    const set = new Set<string>();
+    for (const t of visible) {
+      if (t.group_name) set.add(t.group_name);
+    }
+    return Array.from(set);
+  }, [visible]);
+
+  const filteredVisible = useMemo(() => {
+    if (!visible) return null;
+    if (editLayout) return visible; // when editing layout, always show all to allow complete reordering
+    let list = visible;
+    if (activeCategory !== "all") {
+      list = list.filter((t) => (t.group_name || "") === activeCategory);
+    }
+    if (searchQuery.trim() !== "") {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(
+        (t) =>
+          t.title.toLowerCase().includes(q) ||
+          t.url.toLowerCase().includes(q) ||
+          (t.description && t.description.toLowerCase().includes(q)) ||
+          (t.group_name && t.group_name.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  }, [visible, editLayout, activeCategory, searchQuery]);
+
+  const grouped = filteredVisible ? groupTiles(filteredVisible, groupOrder) : [];
   // Page-level actions (Add / layout editing) portal into the site header so
   // they live in the navbar instead of a floating row between sections.
   const headerSlot = mounted ? document.getElementById("header-actions") : null;
@@ -430,16 +502,289 @@ export function Dashboard() {
     return links;
   }, [tiles]);
 
+  const anyDown = useMemo(
+    () => visible?.some((t) => health[t.id]?.state === "down") ?? false,
+    [visible, health]
+  );
+
+  const cardsGrid = (
+    <>
+      {/* Category Filter Tabs (when not editing layout) */}
+      {!editLayout && visible !== null && visible.length > 0 && (
+        <div className="flex items-center gap-3 pb-1">
+          <div className="flex items-center gap-1.5 overflow-x-auto p-1 rounded-xl border border-border/60 bg-muted/20 scrollbar-none">
+            <button
+              type="button"
+              onClick={() => setActiveCategory("all")}
+              className={cn(
+                "category-tab-btn inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-all shrink-0 cursor-pointer",
+                activeCategory === "all"
+                  ? "bg-primary text-primary-foreground shadow-xs font-semibold"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              )}
+            >
+              All
+              <span
+                className={cn(
+                  "rounded-full px-1.5 py-0.2 text-[10px]",
+                  activeCategory === "all"
+                    ? "bg-primary-foreground/20 text-primary-foreground"
+                    : "bg-background/80 text-muted-foreground"
+                )}
+              >
+                {visible.length}
+              </span>
+            </button>
+            {allVisibleGroups.map((g) => {
+              const count = visible.filter((t) => t.group_name === g).length;
+              const isActive = activeCategory === g;
+              return (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setActiveCategory(g)}
+                  className={cn(
+                    "category-tab-btn inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-all shrink-0 cursor-pointer",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-xs font-semibold"
+                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                  )}
+                >
+                  {g}
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 py-0.2 text-[10px]",
+                      isActive
+                        ? "bg-primary-foreground/20 text-primary-foreground"
+                        : "bg-background/80 text-muted-foreground"
+                    )}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {tiles === null ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-28 rounded-xl" />
+          ))}
+        </div>
+      ) : visible !== null && visible.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
+          <p className="text-sm font-medium">Nothing here yet</p>
+          <p className="max-w-sm text-xs text-muted-foreground">
+            Add a link manually, or add a device and Pier auto-discovers its Docker containers as
+            links.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setAddTab("link");
+              setAddOpen(true);
+            }}
+          >
+            <Plus data-icon="inline-start" className="size-3.5" /> Add a link
+          </Button>
+        </div>
+      ) : filteredVisible !== null && filteredVisible.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-12 text-center">
+          <p className="text-sm font-medium">No links found</p>
+          <p className="max-w-sm text-xs text-muted-foreground">
+            No links match &ldquo;{searchQuery}&rdquo;{activeCategory !== "all" ? ` in category "${activeCategory}"` : ""}.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSearchQuery("");
+              setActiveCategory("all");
+            }}
+          >
+            Clear filter
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {grouped.map(([group, items]) => {
+            // dragenter fires on arrival; dragover keeps firing while hovered,
+            // resolving the hover once the swap cooldown ends.
+            const onHoverTarget = (e: DragEvent<HTMLElement>) => {
+              e.preventDefault();
+              onGroupDragEnter(group, e.timeStamp);
+            };
+            return (
+              <div key={group || "_ungrouped"}>
+                {group && (
+                  <h3
+                    ref={(el) => {
+                      if (el) groupNodes.current.set(group, el);
+                      else groupNodes.current.delete(group);
+                    }}
+                    draggable={editLayout}
+                    onDragStart={
+                      editLayout
+                        ? (e) => {
+                            e.dataTransfer.effectAllowed = "move";
+                            e.dataTransfer.setData("text/plain", group); // Firefox requires data
+                            onGroupDragStart(group);
+                          }
+                        : undefined
+                    }
+                    onDragEnter={editLayout ? onHoverTarget : undefined}
+                    onDragOver={editLayout ? onHoverTarget : undefined}
+                    onDrop={editLayout ? (e) => e.preventDefault() : undefined}
+                    onDragEnd={editLayout ? onGroupDragEnd : undefined}
+                    title={editLayout ? "Drag to reorder groups" : undefined}
+                    className={cn(
+                      "mb-2.5 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase",
+                      theme === "bauhaus-studio" && "font-black text-black tracking-normal",
+                      theme === "bauhaus-dark" && "font-black text-white tracking-normal",
+                      (theme === "cad-blueprint" || theme === "cad-dark") && "font-mono text-primary",
+                      editLayout &&
+                        "w-fit cursor-grab px-1 select-none transition-[opacity,transform,scale] duration-200 ease-out active:cursor-grabbing",
+                      dragGroup === group && "scale-95 opacity-40"
+                    )}
+                  >
+                    {editLayout && <GripVertical className="size-3.5 text-muted-foreground/60" />}
+                    {(theme === "cad-blueprint" || theme === "cad-dark") && <span className="text-primary font-mono text-[10px] mr-1">§</span>}
+                    {group}
+                  </h3>
+                )}
+                <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {items.map((t) => (
+                    <TileCard
+                      key={t.id}
+                      tile={t}
+                      health={health[t.id]}
+                      theme={theme}
+                      reordering={editLayout}
+                      isDragging={dragTileId === t.id}
+                      nodeRef={(el) => {
+                        if (el) tileNodes.current.set(t.id, el);
+                        else tileNodes.current.delete(t.id);
+                      }}
+                      onReorderStart={onTileDragStart}
+                      onReorderOver={onTileDragEnter}
+                      onReorderEnd={onTileDragEnd}
+                      onEdit={(tile) => {
+                        setEditing(tile);
+                        setEditOpen(true);
+                      }}
+                      onDelete={deleteTile}
+                      onHide={hideTile}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+
   return (
     <div className="space-y-8 pb-16">
+      {/* 1. Theme-Specific Telemetry Ribbons */}
+      {theme === "bauhaus-studio" && (
+        <div className="flex flex-wrap items-center justify-between gap-3 font-sans text-xs px-4 py-2 rounded-lg border-2 border-[#121316] bg-white text-[#121316] shadow-[3px_3px_0px_#121316]">
+          <div className="flex items-center gap-3 font-extrabold uppercase tracking-tight">
+            <span className="bg-[#facc15] px-2 py-0.5 border border-[#121316] shadow-[1px_1px_0px_#121316]">
+              BAUHAUS 1919
+            </span>
+            <span>FORM FOLLOWS FUNCTION // ARCHITECTURE</span>
+          </div>
+          <div className="font-mono text-[11px] font-bold text-blue-700">
+            {visible?.length ?? 0} ACTIVE DOCKS
+          </div>
+        </div>
+      )}
+
+      {theme === "bauhaus-dark" && (
+        <div className="flex flex-wrap items-center justify-between gap-3 font-sans text-xs px-4 py-2 rounded-lg border-2 border-[#f9f8f6] bg-[#1c1d22] text-[#f9f8f6] shadow-[3px_3px_0px_#facc15]">
+          <div className="flex items-center gap-3 font-extrabold uppercase tracking-tight">
+            <span className="bg-[#facc15] text-[#121316] px-2 py-0.5 border border-[#f9f8f6] shadow-[1px_1px_0px_#facc15]">
+              BAUHAUS NOCTURNE
+            </span>
+            <span>FORM FOLLOWS FUNCTION // ATELIER NACHT</span>
+          </div>
+          <div className="font-mono text-[11px] font-bold text-[#3b82f6]">
+            {visible?.length ?? 0} ACTIVE DOCKS
+          </div>
+        </div>
+      )}
+
+      {theme === "cad-blueprint" && (
+        <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-[11px] px-4 py-2 rounded-xs border border-blue-600/30 bg-blue-50/50 text-blue-900">
+          <div className="flex items-center gap-3">
+            <span className="font-bold text-blue-700 bg-blue-100/80 px-1.5 py-0.5 rounded-xs border border-blue-600/30">SCALE 1:1</span>
+            <span className="font-medium">|&lt;--- SCHEMATIC ARCHITECTURE: DISTRIBUTED HOMELAB ---&gt;|</span>
+          </div>
+          <div className="text-blue-700 font-mono text-[10px]">
+            SPEC: RFC-1918 · DWG-REV: 2026.4
+          </div>
+        </div>
+      )}
+
+      {theme === "cad-dark" && (
+        <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-[11px] px-4 py-2 rounded-xs border border-sky-400/30 bg-[#0d172a] text-sky-200">
+          <div className="flex items-center gap-3">
+            <span className="font-bold text-sky-400 bg-sky-950/80 px-1.5 py-0.5 rounded-xs border border-sky-400/30">SCALE 1:1</span>
+            <span className="font-medium">|&lt;--- NIGHT SCHEMATIC: DISTRIBUTED HOMELAB ---&gt;|</span>
+          </div>
+          <div className="text-sky-400 font-mono text-[10px]">
+            SPEC: RFC-1918 · DWG-REV: 2026.NIGHT
+          </div>
+        </div>
+      )}
+
+      {theme === "pinboard-atelier" && (
+        <div className="flex flex-wrap items-center justify-between gap-3 font-sans text-xs px-5 py-2.5 rounded-2xl border border-[#ebd9c8] bg-white/90 text-stone-700 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <span className="text-base">📌</span>
+            <span className="font-bold text-stone-900">Homelab Atelier Studio</span>
+            <span className="text-stone-300">·</span>
+            <span className="text-stone-500 font-mono text-[11px]">{visible?.length ?? 0} active service notes</span>
+          </div>
+          <span className="font-mono text-[11px] text-orange-700 bg-orange-100/60 px-2.5 py-0.5 rounded-full border border-orange-200">
+            ⚡ all docks operating smoothly
+          </span>
+        </div>
+      )}
+
+      {theme === "pinboard-dark" && (
+        <div className="flex flex-wrap items-center justify-between gap-3 font-sans text-xs px-5 py-2.5 rounded-2xl border border-[#423932] bg-[#25201c] text-stone-300 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <span className="text-base">📌</span>
+            <span className="font-bold text-stone-100">Midnight Atelier Corkboard</span>
+            <span className="text-stone-500">·</span>
+            <span className="text-stone-400 font-mono text-[11px]">{visible?.length ?? 0} active service notes</span>
+          </div>
+          <span className="font-mono text-[11px] text-amber-300 bg-amber-950/60 px-2.5 py-0.5 rounded-full border border-amber-600/40">
+            ⚡ night shift active
+          </span>
+        </div>
+      )}
+
+      {/* 2. Infrastructure & Hypervisors */}
       {devices.length > 0 && (
         <section aria-label="Devices">
+          <div className="mb-3 flex items-center gap-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase after:h-px after:flex-1 after:bg-border/60">
+            <span>Infrastructure &amp; Hypervisors ({devices.length} {devices.length === 1 ? "Node" : "Nodes"})</span>
+          </div>
           <div className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {devices.map((d) => (
               <DeviceCard
                 key={d.id}
                 device={d}
                 status={statuses[d.id] ?? null}
+                theme={theme}
                 guestLinks={guestLinks}
                 onScan={scanDevice}
                 onEdit={(d) => {
@@ -463,103 +808,9 @@ export function Dashboard() {
         </section>
       )}
 
-      <section aria-label="Links">
-        {tiles === null ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-[76px] rounded-xl" />
-            ))}
-          </div>
-        ) : visible !== null && visible.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
-            <p className="text-sm font-medium">Nothing here yet</p>
-            <p className="max-w-sm text-xs text-muted-foreground">
-              Add a link manually, or add a device and Pier auto-discovers its Docker containers as
-              links.
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setAddTab("link");
-                setAddOpen(true);
-              }}
-            >
-              <Plus data-icon="inline-start" className="size-3.5" /> Add a link
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {grouped.map(([group, items]) => {
-              // dragenter fires on arrival; dragover keeps firing while hovered,
-              // resolving the hover once the swap cooldown ends.
-              const onHoverTarget = (e: DragEvent<HTMLElement>) => {
-                e.preventDefault();
-                onGroupDragEnter(group, e.timeStamp);
-              };
-              return (
-                <div key={group || "_ungrouped"}>
-                  {group && (
-                    <h3
-                      ref={(el) => {
-                        if (el) groupNodes.current.set(group, el);
-                        else groupNodes.current.delete(group);
-                      }}
-                      draggable={editLayout}
-                      onDragStart={
-                        editLayout
-                          ? (e) => {
-                              e.dataTransfer.effectAllowed = "move";
-                              e.dataTransfer.setData("text/plain", group); // Firefox requires data
-                              onGroupDragStart(group);
-                            }
-                          : undefined
-                      }
-                      onDragEnter={editLayout ? onHoverTarget : undefined}
-                      onDragOver={editLayout ? onHoverTarget : undefined}
-                      onDrop={editLayout ? (e) => e.preventDefault() : undefined}
-                      onDragEnd={editLayout ? onGroupDragEnd : undefined}
-                      title={editLayout ? "Drag to reorder groups" : undefined}
-                      className={cn(
-                        "mb-2 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase",
-                        editLayout &&
-                          "w-fit cursor-grab px-1 select-none transition-[opacity,transform,scale] duration-200 ease-out active:cursor-grabbing",
-                        dragGroup === group && "scale-95 opacity-40"
-                      )}
-                    >
-                      {editLayout && <GripVertical className="size-3.5 text-muted-foreground/60" />}
-                      {group}
-                    </h3>
-                  )}
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {items.map((t) => (
-                      <TileCard
-                        key={t.id}
-                        tile={t}
-                        health={health[t.id]}
-                        reordering={editLayout}
-                        isDragging={dragTileId === t.id}
-                        nodeRef={(el) => {
-                          if (el) tileNodes.current.set(t.id, el);
-                          else tileNodes.current.delete(t.id);
-                        }}
-                        onReorderStart={onTileDragStart}
-                        onReorderOver={onTileDragEnter}
-                        onReorderEnd={onTileDragEnd}
-                        onEdit={(tile) => {
-                          setEditing(tile);
-                          setEditOpen(true);
-                        }}
-                        onDelete={deleteTile}
-                        onHide={hideTile}
-                      />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+      {/* 3. Links / Services Section */}
+      <section aria-label="Links" className="space-y-4">
+        {cardsGrid}
       </section>
 
       {editingDevice && (
@@ -606,29 +857,78 @@ export function Dashboard() {
         createPortal(
           <>
             {editLayout && (
-              <p className="mr-auto text-xs text-muted-foreground">
-                Editing layout — drag links, group headings, or device cards to reorder them
+              <p className="mr-auto text-xs text-muted-foreground truncate">
+                Editing layout — drag links, group headings, or device cards
               </p>
             )}
             {!editLayout && (
-              <p
-                className="mr-auto hidden items-center gap-1 text-xs text-muted-foreground/70 sm:flex"
-                title="Countdown to the next automatic refresh"
-              >
-                <RotateCw className="size-3" aria-hidden />
-                devices{" "}
-                <Countdown until={statusRefreshAt} className="tabular-nums" label="Next device usage refresh" />
-                <span className="text-muted-foreground/40">·</span>
-                links{" "}
-                <Countdown until={healthRefreshAt} className="tabular-nums" label="Next link reachability refresh" />
-              </p>
+              <>
+                {/* Brand Pulse Badge */}
+                {anyDown ? (
+                  <span className="hidden xl:inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 text-[11px] font-medium text-amber-400 shrink-0">
+                    <span className="size-1.5 rounded-full bg-amber-500 animate-pulse shadow-[0_0_6px_rgba(245,158,11,0.8)]" />
+                    Degraded Services
+                  </span>
+                ) : (
+                  <span className="hidden xl:inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 text-[11px] font-medium text-emerald-400 shrink-0">
+                    <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
+                    All Systems Operational
+                  </span>
+                )}
+
+                {/* Navbar Center Search Bar */}
+                <div className="relative mx-auto flex-1 max-w-[170px] sm:max-w-xs md:max-w-sm">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground/60 pointer-events-none" />
+                  <Input
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search services, nodes, URLs... (/)"
+                    className="h-8.5 w-full rounded-lg border border-border/80 bg-muted/40 pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:bg-background/90"
+                  />
+                  {searchQuery ? (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                      aria-label="Clear search"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  ) : (
+                    <kbd className="absolute right-2 top-1/2 -translate-y-1/2 hidden md:inline-block rounded border border-border/80 bg-background/60 px-1 text-[10px] text-muted-foreground font-mono pointer-events-none">
+                      /
+                    </kbd>
+                  )}
+                </div>
+
+                {/* Refresh Countdowns */}
+                <div
+                  className="hidden items-center gap-1.5 text-xs text-muted-foreground/70 xl:flex shrink-0"
+                  title="Countdown to the next automatic refresh"
+                >
+                  <RotateCw className="size-3 text-muted-foreground/60" aria-hidden />
+                  <span>
+                    devs <Countdown until={statusRefreshAt} className="tabular-nums" label="Next device usage refresh" />
+                  </span>
+                  <span className="text-muted-foreground/40">·</span>
+                  <span>
+                    links <Countdown until={healthRefreshAt} className="tabular-nums" label="Next link reachability refresh" />
+                  </span>
+                </div>
+              </>
             )}
             {editLayout ? (
               <>
                 <Button variant="outline" size="sm" onClick={cancelLayoutEdit}>
                   <X data-icon="inline-start" className="size-3.5" /> Cancel
                 </Button>
-                <Button size="sm" onClick={() => setEditLayout(false)}>
+                <Button
+                  size="sm"
+                  className="bg-accent-gradient hover:opacity-90 text-white shadow-xs font-semibold"
+                  onClick={() => setEditLayout(false)}
+                >
                   <Check data-icon="inline-start" className="size-3.5" /> Done
                 </Button>
               </>
@@ -642,6 +942,7 @@ export function Dashboard() {
                 )}
                 <Button
                   size="sm"
+                  className="bg-accent-gradient hover:opacity-90 text-white shadow-xs font-semibold"
                   onClick={() => {
                     setAddTab("link");
                     setAddOpen(true);

@@ -1,15 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { EyeOff } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, EyeOff, Palette } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { HiddenLinks } from "@/components/hidden-links";
+import { ThemeSettings } from "@/components/theme-settings";
 import type { EnrichedTile } from "@/lib/tiles";
 import { cn } from "@/lib/utils";
 
-type SectionId = "hidden";
+type SectionId = "appearance" | "hidden";
 
 const SECTIONS: { id: SectionId; label: string; icon: typeof EyeOff }[] = [
+  { id: "appearance", label: "Appearance", icon: Palette },
   { id: "hidden", label: "Hidden links", icon: EyeOff },
 ];
 
@@ -17,7 +20,7 @@ const SECTIONS: { id: SectionId; label: string; icon: typeof EyeOff }[] = [
 export default function SettingsPage() {
   const [tiles, setTiles] = useState<EnrichedTile[] | null>(null);
   const [groupOrder, setGroupOrder] = useState<string[]>([]);
-  const [section, setSection] = useState<SectionId>("hidden");
+  const [section, setSection] = useState<SectionId>("appearance");
 
   const refresh = useCallback(async () => {
     try {
@@ -40,9 +43,18 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 pb-16">
-      <div>
-        <h1 className="text-lg font-semibold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">Manage Pier&apos;s behaviour and content.</p>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-foreground">Settings</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Manage Pier&apos;s behaviour, hidden links, and content.</p>
+        </div>
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <ArrowLeft className="size-3.5" />
+          Dashboard
+        </Link>
       </div>
 
       <div className="flex flex-col gap-6 md:flex-row">
@@ -79,6 +91,7 @@ export default function SettingsPage() {
         </nav>
 
         <div className="min-w-0 flex-1">
+          {section === "appearance" && <ThemeSettings />}
           {section === "hidden" &&
             (hidden === null ? (
               <p className="text-sm text-muted-foreground">Loading…</p>
