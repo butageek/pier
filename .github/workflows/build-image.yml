@@ -108,7 +108,8 @@ jobs:
         run: |
           set -e
           tags="$(echo "${{ steps.meta.outputs.tags }}" | tr '\n' ' ')"
-          digests="$(printf '%s@sha256:%s ' "$REGISTRY_IMAGE" *)"
+          digests=""
+          for f in *; do digests="$digests $REGISTRY_IMAGE@sha256:$f"; done
           # shellcheck disable=SC2086
           docker buildx imagetools create $(printf -- '-t %s ' $tags) $digests
 
