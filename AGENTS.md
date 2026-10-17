@@ -23,17 +23,18 @@ ship Node 24 LTS).
 ## Deployment (keep all three paths working)
 
 - **Docker Compose** — `compose.yaml` pulls the prebuilt `ghcr.io/butageek/pier`
-  image (pushed by `build-image.yml`; building from source is a one-line swap
-  to `build: .` against the same `Dockerfile` — Next standalone output; all
-  SQLite N-API prebuilds bundled, so one image definition serves every arch).
+  image (**linux/amd64 only for now**; building from source works on any arch —
+  all SQLite N-API prebuilds are bundled). Building from source is a one-line
+  swap to `build: .` against the same `Dockerfile` (Next standalone output).
   The image starts as root only so `docker-entrypoint.sh` can chown the data
   volume (bind mounts are root-owned by default), then drops to `PUID:PGID`
   (default 100:100 = node) via su-exec — the official Postgres/Homepage
-  pattern. API routes are wrapped in `guardRoute` (`src/lib/api.ts`) so every
-  error returns JSON; `src/lib/db.ts` adds ownership hints to permission
-  errors; client forms parse via `readJson` (`src/lib/fetch.ts`) so non-JSON
-  responses (proxy 502s) show readable errors, not "Unexpected end of JSON
-  input".
+  pattern; the commented `environment:` block in `compose.yaml` documents
+  PUID/PGID for users. API routes are wrapped in `guardRoute`
+  (`src/lib/api.ts`) so every error returns JSON; `src/lib/db.ts` adds
+  ownership hints to permission errors; client forms parse via `readJson`
+  (`src/lib/fetch.ts`) so non-JSON responses (proxy 502s) show readable
+  errors, not "Unexpected end of JSON input".
 - **One-liner** — `install.sh` installs the prebuilt `pier-standalone.tar.gz`
   release bundle as a systemd service; falls back to building from source
   (`npm ci --ignore-scripts` — better-sqlite3 needs no compiler toolchain).
@@ -68,6 +69,8 @@ PIER_KEY=x node agent/index.mjs   # run the agent standalone (zero deps)
 | `src/lib/agent.ts` | client for pier-agent endpoints (info/containers/stats) |
 | `src/lib/proxmox.ts` | Proxmox VE API client (token auth, self-signed OK) + PVE scan/live-status (per-guest summary) |
 | `src/lib/tiles.ts` | scan reconcile shared by docker + proxmox scanners: upsert links per (device, container, URL), prune gone ones |
+| `src/lib/api.ts` | `guardRoute` — wraps route handler bodies so every throw returns JSON (never an empty 500) |
+| `src/lib/fetch.ts` | `readJson` — client-side Response→JSON parse with readable errors for non-JSON bodies |
 | `src/lib/theme.ts` | two-tier theme management (mode + light/dark preferences, anti-FOUC script, storage keys) |
 | `src/lib/icons.ts` | dashboard-icons slug index (disk-cached, weekly refresh) + matcher |
 | `src/components/dashboard.tsx` | dashboard + category filter tabs + layout-edit drag & drop (FLIP animations in `use-flip.ts`; SWAP_COOLDOWN_MS rationale in situ) |
@@ -76,7 +79,7 @@ PIER_KEY=x node agent/index.mjs   # run the agent standalone (zero deps)
 | `src/components/*` | device card/form, add + tile dialogs, icon/group pickers, `logo.tsx` (brand mark, supports `full` and `mark` variants) |
 | `src/app/icon.svg` · `apple-icon.svg` | Next.js vector favicon and Apple touch icon routes (The Monogram P-Dock) |
 | `agent/index.mjs` | the whole agent: token auth, `/info` `/containers` `/stats` `/container-stats` `/health` |
-| `install.sh` · `Dockerfile` · `compose.yaml` | the three deployment paths (see above) |
+| `install.sh` · `Dockerfile` · `docker-entrypoint.sh` · `compose.yaml` | the three deployment paths (see above; the entrypoint chowns the data volume then drops privileges) |
 
 ## Conventions & gotchas
 
@@ -90,7 +93,14 @@ PIER_KEY=x node agent/index.mjs   # run the agent standalone (zero deps)
   `SafeDevice` (key stripped). `data/` is local-only (gitignored) and holds keys.
 - **DB**: access only via `getDb()`; schema lives in `open()` as `CREATE TABLE
   IF NOT EXISTS`. No migration framework — when changing columns, re-add a
-  `migrate()` with `columnExists`-style guards in `src/lib/db.ts`.
+  `migrate()` with `columnExists`-style guards in `src/lib/db.ts`. Permission
+  failures must keep the actionable ownership hint (`PERM_HINT`).
+- **API error handling**: route handlers are plain functions exported through
+  a `guardRoute` alias (e.g. `export const POST = (req) => guardRoute(()
+  => create(req))`) — new routes must follow this so errors always return
+  JSON. On the client, never call `res.json()` blind: use `readJson` from
+  `src/lib/fetch.ts`, or a proxy 502/empty body becomes the cryptic
+  "Unexpected end of JSON input".
 - **Docker**: only the agent talks to a Docker daemon; Pier never does.
 - **Proxmox**: PVE API tokens default to privilege separation — the token's
   effective rights are the *intersection* of the user's and the token's, so a
