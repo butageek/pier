@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
+import { guardRoute } from "@/lib/api";
 import { getDb } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
+
+export const PUT = (req: Request) => guardRoute(() => saveLayout(req));
 
 /**
  * Persist a user-arranged dashboard layout. Either or both fields:
  *  - `ids`    — tile ids in their new order; rewrites sort_order to match
  *  - `groups` — group names in their new order; upserts tile_groups positions
  */
-export async function PUT(req: Request) {
+async function saveLayout(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== "object") {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });

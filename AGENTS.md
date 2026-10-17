@@ -22,8 +22,18 @@ ship Node 24 LTS).
 
 ## Deployment (keep all three paths working)
 
-- **Docker Compose** — `compose.yaml` builds the `Dockerfile` (Next standalone
-  output; all SQLite N-API prebuilds bundled, so one image serves every arch).
+- **Docker Compose** — `compose.yaml` pulls the prebuilt `ghcr.io/butageek/pier`
+  image (pushed by `build-image.yml`; building from source is a one-line swap
+  to `build: .` against the same `Dockerfile` — Next standalone output; all
+  SQLite N-API prebuilds bundled, so one image definition serves every arch).
+  The image starts as root only so `docker-entrypoint.sh` can chown the data
+  volume (bind mounts are root-owned by default), then drops to `PUID:PGID`
+  (default 100:100 = node) via su-exec — the official Postgres/Homepage
+  pattern. API routes are wrapped in `guardRoute` (`src/lib/api.ts`) so every
+  error returns JSON; `src/lib/db.ts` adds ownership hints to permission
+  errors; client forms parse via `readJson` (`src/lib/fetch.ts`) so non-JSON
+  responses (proxy 502s) show readable errors, not "Unexpected end of JSON
+  input".
 - **One-liner** — `install.sh` installs the prebuilt `pier-standalone.tar.gz`
   release bundle as a systemd service; falls back to building from source
   (`npm ci --ignore-scripts` — better-sqlite3 needs no compiler toolchain).

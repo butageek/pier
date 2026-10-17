@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
+import { guardRoute } from "@/lib/api";
 import { getDb } from "@/lib/db";
 import { AgentError, testAgent } from "@/lib/agent";
 import { testProxmox } from "@/lib/proxmox";
 import type { Device, SafeDevice } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+export const GET = () => guardRoute(listDevices);
+export const POST = (req: Request) => guardRoute(() => createDevice(req));
 
 /** Devices as sent to the browser — agent keys/tokens never leave the server. */
 function toSafeDevice(d: Device): SafeDevice {
@@ -13,12 +17,12 @@ function toSafeDevice(d: Device): SafeDevice {
   return safe;
 }
 
-export async function GET() {
+async function listDevices() {
   const rows = getDb().prepare("SELECT * FROM devices ORDER BY position, id").all() as Device[];
   return NextResponse.json({ devices: rows.map(toSafeDevice) });
 }
 
-export async function POST(req: Request) {
+async function createDevice(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
 

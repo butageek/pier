@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { guardRoute } from "@/lib/api";
 import { getDb } from "@/lib/db";
 import { enrichTiles } from "@/lib/tiles";
 import { gcUploadIcon } from "@/lib/uploads";
@@ -6,9 +7,14 @@ import type { Tile } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
+type Ctx = { params: Promise<{ id: string }> };
+
+export const PATCH = (req: Request, ctx: Ctx) => guardRoute(() => updateTile(req, ctx));
+export const DELETE = (_req: Request, ctx: Ctx) => guardRoute(() => deleteTile(ctx));
+
 const EDITABLE = ["title", "url", "description", "group_name", "icon", "sort_order"] as const;
 
-export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
+async function updateTile(req: Request, ctx: Ctx) {
   const { id } = await ctx.params;
   const tileId = Number(id);
   if (!Number.isInteger(tileId)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
@@ -45,7 +51,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   return NextResponse.json({ tile: (await enrichTiles([tile]))[0] });
 }
 
-export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+async function deleteTile(ctx: Ctx) {
   const { id } = await ctx.params;
   const tileId = Number(id);
   if (!Number.isInteger(tileId)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });

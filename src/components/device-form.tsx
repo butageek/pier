@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { readJson } from "@/lib/fetch";
 import type { SafeDevice } from "@/lib/types";
 
 type DeviceKind = "docker" | "proxmox";
@@ -152,17 +153,17 @@ export function DeviceForm({
           headers: { "content-type": "application/json" },
           body: JSON.stringify(body),
         });
-        const data = await res.json();
+        const data = await readJson<{ error?: string; device: { id: number; name: string } }>(res);
         if (!res.ok) throw new Error(data.error ?? "Failed to save device");
 
         // Host/URL may have changed — rescan so endpoint links follow.
         let note = "";
         try {
           const scanRes = await fetch(`/api/devices/${device!.id}/scan`, { method: "POST" });
-          const scan = await scanRes.json();
+          const scan = await readJson<{ containersSeen?: number; tilesCreated?: number }>(scanRes);
           if (scanRes.ok) {
             const noun = kind === "proxmox" ? "guests" : "containers";
-            note = ` — ${scan.containersSeen} ${noun}, +${scan.tilesCreated} links`;
+            note = ` — ${scan.containersSeen ?? 0} ${noun}, +${scan.tilesCreated ?? 0} links`;
           }
         } catch {
           /* best-effort */
@@ -177,19 +178,19 @@ export function DeviceForm({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ name, host, agent_url: agentUrl, agent_key: pveToken || agentKey, type: mode }),
       });
-      const data = await res.json();
+      const data = await readJson<{ error?: string; device: { id: number; name: string } }>(res);
       if (!res.ok) throw new Error(data.error ?? "Failed to add device");
 
       // Scan right away so tiles appear without an extra click.
       let scanNote = "";
       try {
         const scanRes = await fetch(`/api/devices/${data.device.id}/scan`, { method: "POST" });
-        const scan = await scanRes.json();
+        const scan = await readJson<{ containersSeen?: number; tilesCreated?: number }>(scanRes);
         if (scanRes.ok) {
           const noun = mode === "proxmox" ? "guests" : "containers";
           scanNote =
-            scan.containersSeen > 0
-              ? ` — ${scan.containersSeen} ${noun}, +${scan.tilesCreated} tiles`
+            (scan.containersSeen ?? 0) > 0
+              ? ` — ${scan.containersSeen} ${noun}, +${scan.tilesCreated ?? 0} tiles`
               : " — nothing found";
         }
       } catch {

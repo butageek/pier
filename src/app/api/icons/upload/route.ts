@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
+import { guardRoute } from "@/lib/api";
 import { saveIconUpload, UploadError } from "@/lib/uploads";
 
 export const dynamic = "force-dynamic";
+
+export const POST = (req: Request) => guardRoute(() => uploadIcon(req));
 
 /**
  * POST /api/icons/upload — multipart "file" field. Persists the image under
  * data/icons/ and returns the tiles.icon value ("upload:<filename>").
  */
-export async function POST(req: Request) {
+async function uploadIcon(req: Request) {
   let form: FormData;
   try {
     form = await req.formData();

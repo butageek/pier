@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { guardRoute } from "@/lib/api";
 import { getDb } from "@/lib/db";
 import { AgentError } from "@/lib/agent";
 import { scanProxmoxDevice } from "@/lib/proxmox";
@@ -7,7 +8,10 @@ import type { Device } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+export const POST = (_req: Request, ctx: { params: Promise<{ id: string }> }) =>
+  guardRoute(() => scanDeviceRoute(ctx));
+
+async function scanDeviceRoute(ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const deviceId = Number(id);
   if (!Number.isInteger(deviceId)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });

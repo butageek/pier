@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { readJson } from "@/lib/fetch";
 
 type Props = {
   /** Chosen slug, "" = auto. */
@@ -120,7 +121,7 @@ export function IconPicker({ value, onChange, matchHints }: Props) {
       const fd = new FormData();
       fd.append("file", file);
       const res = await fetch("/api/icons/upload", { method: "POST", body: fd });
-      const data = await res.json();
+      const data = await readJson<{ error?: string; icon: string }>(res);
       if (!res.ok) throw new Error(data.error ?? "Upload failed");
       onChange(data.icon);
       setOpen(false);

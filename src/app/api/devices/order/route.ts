@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
+import { guardRoute } from "@/lib/api";
 import { getDb } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+export const PUT = (req: Request) => guardRoute(() => saveDeviceOrder(req));
+
 /** Persist a user-arranged device order: `ids` in their new order. */
-export async function PUT(req: Request) {
+async function saveDeviceOrder(req: Request) {
   const body = await req.json().catch(() => null);
   const ids = (body ?? {})?.ids;
   if (!Array.isArray(ids) || !ids.every((id) => Number.isInteger(id))) {

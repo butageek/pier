@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
+import { guardRoute } from "@/lib/api";
 import { readIconUpload } from "@/lib/uploads";
 
 export const dynamic = "force-dynamic";
+
+export const GET = (_req: Request, ctx: { params: Promise<{ name: string }> }) =>
+  guardRoute(() => iconFile(ctx));
 
 /**
  * GET /api/icons/file/<name> — serve an uploaded icon from data/icons/.
  * Names are upload-generated (uuid + ext) and strictly validated, so this
  * can't escape the directory. UUID names never change content → immutable.
  */
-export async function GET(_req: Request, ctx: { params: Promise<{ name: string }> }) {
+async function iconFile(ctx: { params: Promise<{ name: string }> }) {
   const { name } = await ctx.params;
   const file = readIconUpload(name);
   if (!file) return NextResponse.json({ error: "Not found" }, { status: 404 });

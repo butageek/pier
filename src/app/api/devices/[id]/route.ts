@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { guardRoute } from "@/lib/api";
 import { getDb } from "@/lib/db";
 import { AgentError, testAgent } from "@/lib/agent";
 import { testProxmox } from "@/lib/proxmox";
@@ -6,7 +7,12 @@ import type { Device } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
+type Ctx = { params: Promise<{ id: string }> };
+
+export const PATCH = (req: Request, ctx: Ctx) => guardRoute(() => updateDevice(req, ctx));
+export const DELETE = (_req: Request, ctx: Ctx) => guardRoute(() => deleteDevice(ctx));
+
+async function updateDevice(req: Request, ctx: Ctx) {
   const { id } = await ctx.params;
   const deviceId = Number(id);
   if (!Number.isInteger(deviceId)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
@@ -55,7 +61,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   return NextResponse.json({ device: safe });
 }
 
-export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+async function deleteDevice(ctx: Ctx) {
   const { id } = await ctx.params;
   const deviceId = Number(id);
   if (!Number.isInteger(deviceId)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });

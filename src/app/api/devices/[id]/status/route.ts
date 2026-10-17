@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
+import { guardRoute } from "@/lib/api";
 import { getDb } from "@/lib/db";
 import { agentContainers, agentContainerStats, agentStats, AgentError } from "@/lib/agent";
 import { proxmoxLiveStatus } from "@/lib/proxmox";
 import type { Device, DeviceStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+export const GET = (_req: Request, ctx: { params: Promise<{ id: string }> }) =>
+  guardRoute(() => deviceStatus(ctx));
 
 /**
  * Live resource usage from pier-agent on the server — real host CPU/RAM
@@ -13,7 +17,7 @@ export const dynamic = "force-dynamic";
 const CACHE_TTL_MS = 15_000;
 const cache = new Map<number, { at: number; status: DeviceStatus }>();
 
-export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+async function deviceStatus(ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const deviceId = Number(id);
   if (!Number.isInteger(deviceId)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });

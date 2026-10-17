@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { guardRoute } from "@/lib/api";
 import { getDb } from "@/lib/db";
 import { resolveIcon } from "@/lib/icons";
 import { enrichTiles } from "@/lib/tiles";
@@ -6,7 +7,10 @@ import type { Tile } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export const GET = () => guardRoute(listTiles);
+export const POST = (req: Request) => guardRoute(() => createTile(req));
+
+async function listTiles() {
   const db = getDb();
   const tiles = db
     .prepare("SELECT * FROM tiles ORDER BY group_name, sort_order, id")
@@ -20,7 +24,7 @@ export async function GET() {
   });
 }
 
-export async function POST(req: Request) {
+async function createTile(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
 

@@ -1,10 +1,13 @@
 import http from "node:http";
 import https from "node:https";
 import { NextResponse } from "next/server";
+import { guardRoute } from "@/lib/api";
 import { getDb } from "@/lib/db";
 import type { TileHealth } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+export const GET = () => guardRoute(linkHealth);
 
 /**
  * Reachability probe for dashboard links. Browsers can't ping cross-origin
@@ -77,7 +80,7 @@ function check(id: number, url: string): Promise<TileHealth> {
   return p;
 }
 
-export async function GET() {
+export async function linkHealth() {
   const tiles = getDb()
     .prepare("SELECT id, url FROM tiles WHERE hidden = 0")
     .all() as { id: number; url: string }[];

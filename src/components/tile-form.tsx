@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { IconPicker } from "@/components/icon-picker";
 import { GroupSelect } from "@/components/group-select";
+import { readJson } from "@/lib/fetch";
 import type { EnrichedTile } from "@/lib/tiles";
 
 /**
@@ -44,7 +45,7 @@ export function TileForm({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ title, url, description, group, icon }),
       });
-      const data = await res.json();
+      const data = await readJson<{ error?: string }>(res);
       if (!res.ok) throw new Error(data.error ?? "Failed to save");
       onSaved();
       onDone();

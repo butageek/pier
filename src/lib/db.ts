@@ -11,11 +11,33 @@ const DB_PATH = path.join(DATA_DIR, "pier.db");
 
 const globalForDb = globalThis as unknown as { pierDb?: Database.Database };
 
+/** Hint appended to data-directory permission errors (classic Docker trap). */
+const PERM_HINT =
+  "Fix the ownership of the data directory and restart: " +
+  "Docker Compose → `sudo chown -R 100:100 ./data` (or set PUID/PGID), " +
+  "systemd install → `sudo chown -R pier:pier /opt/pier/data`.";
+
 function open(): Database.Database {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  const db = new Database(DB_PATH);
-  db.pragma("journal_mode = WAL");
-  db.exec(`
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  } catch (err) {
+    throw new Error(
+      `Pier cannot create its data directory ${DATA_DIR} ` +
+        `(${err instanceof Error ? err.message : String(err)}). ${PERM_HINT}`
+    );
+  }
+  let db: Database.Database;
+  try {
+    db = new Database(DB_PATH);
+  } catch (err) {
+    throw new Error(
+      `Pier cannot open its database at ${DB_PATH} ` +
+        `(${err instanceof Error ? err.message : String(err)}). ${PERM_HINT}`
+    );
+  }
+  try {
+    db.pragma("journal_mode = WAL");
+    db.exec(`
     CREATE TABLE IF NOT EXISTS tiles (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
@@ -47,11 +69,19 @@ function open(): Database.Database {
       ON tiles(device_id, container_id, url)
       WHERE device_id IS NOT NULL AND container_id IS NOT NULL;
     -- User-arranged group order (dashboard groups are otherwise alphabetical).
-    CREATE TABLE IF NOT EXISTS tile_groups (
-      name TEXT PRIMARY KEY,
-      position INTEGER NOT NULL DEFAULT 0
-    );
-  `);
+      CREATE TABLE IF NOT EXISTS tile_groups (
+        name TEXT PRIMARY KEY,
+        position INTEGER NOT NULL DEFAULT 0
+      );
+    `);
+  } catch (err) {
+    if (/readonly|disk image|locked/i.test(String(err))) {
+      throw new Error(
+        `Pier cannot write to ${DATA_DIR} (${err instanceof Error ? err.message : String(err)}). ${PERM_HINT}`
+      );
+    }
+    throw err;
+  }
   return db;
 }
 
