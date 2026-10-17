@@ -94,7 +94,8 @@ PIER_KEY=x node agent/index.mjs   # run the agent standalone (zero deps)
 - **DB**: access only via `getDb()`; schema lives in `open()` as `CREATE TABLE
   IF NOT EXISTS`. No migration framework — when changing columns, re-add a
   `migrate()` with `columnExists`-style guards in `src/lib/db.ts`. Permission
-  failures must keep the actionable ownership hint (`PERM_HINT`).
+  failures must stay self-diagnosing: `ownershipDiagnostics()` reports the
+  process uid/gid vs the data dir's owner and names the exact fix.
 - **API error handling**: route handlers are plain functions exported through
   a `guardRoute` alias (e.g. `export const POST = (req) =>
   guardRoute(() => create(req))`) so errors always return JSON — new routes

@@ -11,11 +11,35 @@ const DB_PATH = path.join(DATA_DIR, "pier.db");
 
 const globalForDb = globalThis as unknown as { pierDb?: Database.Database };
 
-/** Hint appended to data-directory permission errors (classic Docker trap). */
-const PERM_HINT =
-  "Fix the ownership of the data directory and restart: " +
-  "Docker Compose → `sudo chown -R 100:100 ./data` (or set PUID/PGID), " +
-  "systemd install → `sudo chown -R pier:pier /opt/pier/data`.";
+/**
+ * Self-diagnosing permission-error text: reports who the process runs as vs
+ * who owns the data dir, and names the exact fix for that combination (the
+ * classic Docker trap — a PUID/PGID mismatch looks identical to a bug).
+ */
+function ownershipDiagnostics(): string {
+  const uid = process.getuid?.();
+  const gid = process.getgid?.();
+  let owner = "";
+  try {
+    const st = fs.statSync(DATA_DIR);
+    owner = `, and the data dir is owned by ${st.uid}:${st.gid} (mode ${(st.mode & 0o7777).toString(8)})`;
+    if (uid != null && (st.uid !== uid || (gid != null && st.gid !== gid))) {
+      return (
+        `Pier is running as uid=${uid ?? "?"} gid=${gid ?? "?"}${owner} — they don't match. ` +
+        `Either chown the directory to the running user ` +
+        `(sudo chown -R ${uid}:${gid} ./data) or remove PUID/PGID from compose.yaml ` +
+        `so Pier runs as the directory's owner, then recreate the container.`
+      );
+    }
+  } catch {
+    /* stat failed — report the process ids only */
+  }
+  return (
+    `Pier is running as uid=${uid ?? "?"} gid=${gid ?? "?"}${owner}, which looks correct — ` +
+    `check extended ACLs (Synology: ls -le ./data), that the mount isn't read-only, ` +
+    `and that the volume has free space.`
+  );
+}
 
 function open(): Database.Database {
   try {
@@ -23,7 +47,7 @@ function open(): Database.Database {
   } catch (err) {
     throw new Error(
       `Pier cannot create its data directory ${DATA_DIR} ` +
-        `(${err instanceof Error ? err.message : String(err)}). ${PERM_HINT}`
+        `(${err instanceof Error ? err.message : String(err)}). ${ownershipDiagnostics()}`
     );
   }
   let db: Database.Database;
@@ -32,7 +56,7 @@ function open(): Database.Database {
   } catch (err) {
     throw new Error(
       `Pier cannot open its database at ${DB_PATH} ` +
-        `(${err instanceof Error ? err.message : String(err)}). ${PERM_HINT}`
+        `(${err instanceof Error ? err.message : String(err)}). ${ownershipDiagnostics()}`
     );
   }
   try {
@@ -77,7 +101,7 @@ function open(): Database.Database {
   } catch (err) {
     if (/readonly|disk image|locked/i.test(String(err))) {
       throw new Error(
-        `Pier cannot write to ${DATA_DIR} (${err instanceof Error ? err.message : String(err)}). ${PERM_HINT}`
+        `Pier cannot write to ${DATA_DIR} (${err instanceof Error ? err.message : String(err)}). ${ownershipDiagnostics()}`
       );
     }
     throw err;
