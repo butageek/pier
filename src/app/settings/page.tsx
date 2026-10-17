@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 
 type SectionId = "appearance" | "hidden";
 
+type Version = { version: string };
+
 const SECTIONS: { id: SectionId; label: string; icon: typeof EyeOff }[] = [
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "hidden", label: "Hidden links", icon: EyeOff },
@@ -21,6 +23,7 @@ export default function SettingsPage() {
   const [tiles, setTiles] = useState<EnrichedTile[] | null>(null);
   const [groupOrder, setGroupOrder] = useState<string[]>([]);
   const [section, setSection] = useState<SectionId>("appearance");
+  const [version, setVersion] = useState("");
 
   const refresh = useCallback(async () => {
     try {
@@ -37,6 +40,11 @@ export default function SettingsPage() {
     // Initial load (setState happens asynchronously once data arrives).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
+    // Which build is running — the first check when a fix "isn't working".
+    fetch("/api/version")
+      .then((res) => res.json() as Promise<Version>)
+      .then((d) => setVersion(d.version))
+      .catch(() => {});
   }, [refresh]);
 
   const hidden = tiles?.filter((t) => t.hidden) ?? null;
@@ -100,6 +108,10 @@ export default function SettingsPage() {
             ))}
         </div>
       </div>
+
+      <p className="pt-4 text-center text-xs text-muted-foreground/70">
+        Pier {version && `v${version}`} — self-hosted from your own server.
+      </p>
     </div>
   );
 }
