@@ -1,9 +1,8 @@
 # Builds the Pier dashboard image and publishes it to GHCR, so Docker Compose
 # users pull a prebuilt image instead of compiling Next.js on their device
-# (see compose.yaml). linux/amd64 and linux/arm64 build on their NATIVE
-# runners (QEMU emulation makes cache-cold arm64 builds take 1h+), each
-# pushing an anonymous digest; a merge job then stitches them into one
-# multi-arch manifest tagged by metadata-action.
+# (see compose.yaml). x86-64 only for now — to add arm64 later, duplicate the
+# build job on the free ubuntu-24.04-arm runner and merge the per-arch digests
+# into one manifest (docker docs "distribute build across runners" pattern).
 # Uses the built-in GITHUB_TOKEN — no extra secrets required.
 name: Build app image
 
@@ -13,20 +12,9 @@ on:
     tags: ["v*"]
   pull_request:
 
-env:
-  REGISTRY_IMAGE: ghcr.io/${{ github.repository_owner }}/pier
-
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: linux/amd64
-            runner: ubuntu-latest
-          - platform: linux/arm64
-            runner: ubuntu-24.04-arm
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
@@ -34,59 +22,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/login-action@v3
-        if: github.event_name != 'pull_request'
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # PRs just verify the Dockerfile builds (nothing pushed); pushes emit an
-      # untagged digest that the merge job assembles into the multi-arch tags.
-      - id: build
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: ${{ matrix.platform }}
-          outputs: ${{ github.event_name == 'pull_request'
-            && 'type=cacheonly'
-            || format('type=image,name={0},push-by-digest=true,name-canonical=true,push=true', env.REGISTRY_IMAGE) }}
-          cache-from: type=gha,scope=app-${{ matrix.platform }}
-          cache-to: type=gha,scope=app-${{ matrix.platform }},mode=max
-
-      - name: Export digest
-        if: github.event_name != 'pull_request'
-        run: |
-          mkdir -p /tmp/digests
-          digest="${{ steps.build.outputs.digest }}"
-          touch "/tmp/digests/${digest#sha256:}"
-
-      - uses: actions/upload-artifact@v4
-        if: github.event_name != 'pull_request'
-        with:
-          name: digests-${{ matrix.runner }}
-          path: /tmp/digests/*
-          if-no-files-found: error
-
-  merge:
-    needs: build
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: /tmp/digests
-          pattern: digests-*
-          merge-multiple: true
+      - name: Compute lowercase image name
+        id: img
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/pier" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-buildx-action@v3
 
       - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -95,7 +38,7 @@ jobs:
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY_IMAGE }}
+          images: ${{ steps.img.outputs.name }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=branch
@@ -103,15 +46,12 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha
 
-      - name: Create manifest list and push
-        working-directory: /tmp/digests
-        run: |
-          set -e
-          tags="$(echo "${{ steps.meta.outputs.tags }}" | tr '\n' ' ')"
-          digests=""
-          for f in *; do digests="$digests $REGISTRY_IMAGE@sha256:$f"; done
-          # shellcheck disable=SC2086
-          docker buildx imagetools create $(printf -- '-t %s ' $tags) $digests
-
-      - name: Inspect
-        run: docker buildx imagetools inspect "${{ env.REGISTRY_IMAGE }}:${{ steps.meta.outputs.version }}"
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

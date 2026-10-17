@@ -85,13 +85,14 @@ curl -fsSL https://raw.githubusercontent.com/butageek/pier/main/compose.yaml -o 
 docker compose up -d       # prebuilt image — dashboard at http://localhost:3000
 ```
 
-Nothing is compiled on your device — the image comes prebuilt from GHCR for
-amd64 and arm64. The container starts as root only to fix `./data` ownership
+Nothing is compiled on your device — the image comes prebuilt from GHCR
+(x86-64/amd64). The container starts as root only to fix `./data` ownership
 (Docker creates bind mounts as root — the classic trap that breaks SQLite
-writes), then drops to the unprivileged `node` user; set `PUID`/`PGID` to run
-as your host user instead. Everything of consequence lives in `./data`
-(SQLite database, agent keys) — mount or back up that directory and your Pier
-survives updates:
+writes), then drops to the unprivileged `node` user. To make `./data` files
+owned by your own account (e.g. on a NAS/Synology), set `PUID`/`PGID` — the
+commented `environment:` block in `compose.yaml` shows how. Everything of
+consequence lives in `./data` (SQLite database, agent keys) — mount or back
+up that directory and your Pier survives updates:
 
 ```bash
 docker compose pull && docker compose up -d

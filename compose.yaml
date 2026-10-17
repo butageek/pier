@@ -1,12 +1,14 @@
-# Pier — the dashboard itself. Data (SQLite, agent keys) lives in ./data.
-# The image is pulled prebuilt from GHCR — nothing is compiled on your device.
-# To build from source instead, replace the image line below with:
-#   build: .
-# The container starts as root only to fix ./data ownership (Docker creates
-# bind mounts as root), then runs the app as the unprivileged node user.
-# Optional: PUID/PGID env vars run it as your host user instead, so ./data
-# files are owned by you on the host. A named volume works too:
-#   volumes: ["pier-data:/app/data"] + top-level `volumes: { pier-data: {} }`.
+# Pier — a dock for your services.
+#
+#   Start:  docker compose up -d        → dashboard at http://localhost:3000
+#   Update: docker compose pull && docker compose up -d
+#
+# All data (SQLite database, agent keys, uploaded icons) lives in ./data
+# next to this file — back that folder up and Pier survives anything.
+#
+# The image is pulled prebuilt from GHCR (linux/amd64) — nothing is compiled
+# on your device. To build from source instead, replace `image:` with
+# `build: .` and run `docker compose up -d --build`.
 services:
   pier:
     image: ghcr.io/butageek/pier:latest
@@ -15,6 +17,15 @@ services:
       - "3000:3000"
     volumes:
       - ./data:/app/data
+    # Out of the box Pier runs as the container's unprivileged `node` user
+    # (uid 100) and fixes ./data ownership on startup — nothing to configure.
+    #
+    # Want ./data owned by YOUR account on the host (handy on a NAS/Synology,
+    # so you can browse, edit and back up the files directly)? Find your ids
+    # with `id -u` and `id -g`, then uncomment and fill them in:
+    #environment:
+    #  PUID: "1026"   # <- your user id    (default: 100)
+    #  PGID: "100"    # <- your group id   (default: 100)
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO", "-", "http://127.0.0.1:3000/"]
@@ -23,9 +34,9 @@ services:
       retries: 3
       start_period: 15s
 
-  # Optional: discover the Docker server Pier itself runs on. For other
-  # servers, run pier-agent there instead (see README) — point Pier at
-  # http://<that-host>:8080 and reuse PIER_KEY below.
+  # Optional: let Pier also watch the Docker server it runs on. For other
+  # servers, run pier-agent there instead (see README) — point Pier's
+  # Add -> Device dialog at http://<that-host>:8080 with the same PIER_KEY.
   # pier-agent:
   #   image: ghcr.io/butageek/pier-agent:latest
   #   container_name: pier-agent
