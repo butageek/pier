@@ -80,16 +80,22 @@ keys included, so treat that file as local-only).
 ### Deploy with Docker Compose
 
 ```bash
-git clone https://github.com/butageek/pier.git && cd pier
-docker compose up -d --build       # dashboard at http://localhost:3000
+mkdir pier && cd pier
+curl -fsSL https://raw.githubusercontent.com/butageek/pier/main/compose.yaml -o compose.yaml
+docker compose up -d       # prebuilt image — dashboard at http://localhost:3000
 ```
 
-Everything of consequence lives in `./data` (SQLite database, agent keys) —
-mount or back up that directory and your Pier survives rebuilds. Updates:
+Nothing is compiled on your device — the image comes prebuilt from GHCR for
+amd64 and arm64. Everything of consequence lives in `./data` (SQLite database,
+agent keys) — mount or back up that directory and your Pier survives updates:
 
 ```bash
-git pull && docker compose up -d --build
+docker compose pull && docker compose up -d
 ```
+
+Prefer building from source? `git clone` the repo, swap the `image:` line in
+`compose.yaml` for `build: .` (a hint sits in the file), and run
+`docker compose up -d --build`.
 
 Want Pier to also watch the Docker server it runs on? Uncomment the
 `pier-agent` service in `compose.yaml` (one shared `PIER_KEY`, one Docker
@@ -124,9 +130,9 @@ npm run lint && npm run build
 ```
 
 CI (`.github/workflows/`) runs lint + build on every push, publishes the
-pier-agent image to GHCR, and attaches a prebuilt `pier-standalone.tar.gz`
-bundle to every release (that's what makes the one-liner fast). MIT licensed —
-see LICENSE.
+`pier` and `pier-agent` images to GHCR (that's what keeps the Compose deploy
+build-free), and attaches a prebuilt `pier-standalone.tar.gz` bundle to every
+release (that's what makes the one-liner fast). MIT licensed — see LICENSE.
 
 ## Connecting a device
 

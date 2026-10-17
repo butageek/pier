@@ -1,8 +1,10 @@
 # Pier — the dashboard itself. Data (SQLite, agent keys) lives in ./data.
+# The image is pulled prebuilt from GHCR — nothing is compiled on your device.
+# To build from source instead, replace the image line below with:
+#   build: .
 services:
   pier:
-    build: .
-    image: pier
+    image: ghcr.io/butageek/pier:latest
     container_name: pier
     ports:
       - "3000:3000"

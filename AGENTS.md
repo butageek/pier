@@ -30,8 +30,8 @@ ship Node 24 LTS).
 - **Plain Node** — `npm ci && npm run build && npm start`.
 
 Releases: tag `vX.Y.Z` → bump commit → `gh release create`. The `build-app`
-workflow attaches the standalone bundle to each release; `build-agent`
-pushes the pier-agent image to GHCR on every push.
+workflow attaches the standalone bundle to each release; `build-image` pushes
+the pier image and `build-agent` the pier-agent image to GHCR on every push.
 
 ## Commands
 
