@@ -23,14 +23,14 @@ ship Node 24 LTS).
 ## Deployment (keep all three paths working)
 
 - **Docker Compose** — `compose.yaml` pulls the prebuilt `ghcr.io/butageek/pier`
-  image (**linux/amd64 only for now**; building from source works on any arch —
-  all SQLite N-API prebuilds are bundled). Building from source is a one-line
-  swap to `build: .` against the same `Dockerfile` (Next standalone output).
+  image (**linux/amd64 only for now**). Building from source is a one-line
+  swap to `build: .` against the same `Dockerfile` (Next standalone output;
+  all SQLite N-API prebuilds bundled, so it works on any arch).
   The image starts as root only so `docker-entrypoint.sh` can chown the data
   volume (bind mounts are root-owned by default), then drops to `PUID:PGID`
   (default 100:100 = node) via su-exec — the official Postgres/Homepage
-  pattern; the commented `environment:` block in `compose.yaml` documents
-  PUID/PGID for users. API routes are wrapped in `guardRoute`
+  pattern; `compose.yaml`'s commented `environment:` block documents
+  PUID/PGID. API routes are wrapped in `guardRoute`
   (`src/lib/api.ts`) so every error returns JSON; `src/lib/db.ts` adds
   ownership hints to permission errors; client forms parse via `readJson`
   (`src/lib/fetch.ts`) so non-JSON responses (proxy 502s) show readable
@@ -96,11 +96,11 @@ PIER_KEY=x node agent/index.mjs   # run the agent standalone (zero deps)
   `migrate()` with `columnExists`-style guards in `src/lib/db.ts`. Permission
   failures must keep the actionable ownership hint (`PERM_HINT`).
 - **API error handling**: route handlers are plain functions exported through
-  a `guardRoute` alias (e.g. `export const POST = (req) => guardRoute(()
-  => create(req))`) — new routes must follow this so errors always return
-  JSON. On the client, never call `res.json()` blind: use `readJson` from
-  `src/lib/fetch.ts`, or a proxy 502/empty body becomes the cryptic
-  "Unexpected end of JSON input".
+  a `guardRoute` alias (e.g. `export const POST = (req) =>
+  guardRoute(() => create(req))`) so errors always return JSON — new routes
+  must follow this. On the client, never call `res.json()` blind: use
+  `readJson` from `src/lib/fetch.ts`, or a proxy 502/empty body becomes the
+  cryptic "Unexpected end of JSON input".
 - **Docker**: only the agent talks to a Docker daemon; Pier never does.
 - **Proxmox**: PVE API tokens default to privilege separation — the token's
   effective rights are the *intersection* of the user's and the token's, so a

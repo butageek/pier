@@ -102,11 +102,11 @@ Prefer building from source? `git clone` the repo, swap the `image:` line in
 `compose.yaml` for `build: .` (a hint sits in the file), and run
 `docker compose up -d --build`.
 
-**Permission troubles?** If adds/edits ever fail with a message about the
-database being read-only, the `./data` folder isn't writable by the container
-user — fix it with `sudo chown -R 100:100 ./data` (or set `PUID`/`PGID` as
-shown in `compose.yaml`) and restart. On a normal `docker compose up -d` this
-is handled automatically by the image's entrypoint.
+**Permission troubles?** If adds/edits ever fail with a read-only database
+error, `./data` isn't writable by the container user — fix it with
+`sudo chown -R 100:100 ./data` (or set `PUID`/`PGID` as shown in
+`compose.yaml`) and restart. On a normal `docker compose up -d` this is
+handled automatically by the image's entrypoint.
 
 Want Pier to also watch the Docker server it runs on? Uncomment the
 `pier-agent` service in `compose.yaml` (one shared `PIER_KEY`, one Docker
@@ -140,12 +140,11 @@ npm run dev   # dashboard at http://localhost:3000
 npm run lint && npm run build
 ```
 
-CI (`.github/workflows/`) runs lint + build on every push, publishes the
-`pier` (linux/amd64 for now — arm64 is a documented one-job re-add in
-`build-image.yml`) and `pier-agent` images to GHCR (that's what keeps the
-Compose deploy build-free), and attaches a prebuilt `pier-standalone.tar.gz`
-bundle to every release (that's what makes the one-liner fast). MIT licensed —
-see LICENSE.
+CI (`.github/workflows/`) runs lint + build on every push and publishes the
+`pier` and `pier-agent` images to GHCR (linux/amd64 for now; `build-image.yml`
+notes how to re-add arm64) — that's what keeps the Compose deploy build-free.
+It also attaches a prebuilt `pier-standalone.tar.gz` bundle to every release
+(that's what makes the one-liner fast). MIT licensed — see LICENSE.
 
 ## Connecting a device
 
