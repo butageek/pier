@@ -19,26 +19,36 @@ const globalForDb = globalThis as unknown as { pierDb?: Database.Database };
 function ownershipDiagnostics(): string {
   const uid = process.getuid?.();
   const gid = process.getgid?.();
-  let owner = "";
   try {
     const st = fs.statSync(DATA_DIR);
-    owner = `, and the data dir is owned by ${st.uid}:${st.gid} (mode ${(st.mode & 0o7777).toString(8)})`;
+    const mode = (st.mode & 0o7777).toString(8);
+    const report = `Pier is running as uid=${uid ?? "?"} gid=${gid ?? "?"}, and the data dir is owned by ${st.uid}:${st.gid} (mode ${mode})`;
     if (uid != null && (st.uid !== uid || (gid != null && st.gid !== gid))) {
       return (
-        `Pier is running as uid=${uid ?? "?"} gid=${gid ?? "?"}${owner} — they don't match. ` +
+        `${report} — they don't match. ` +
         `Either chown the directory to the running user ` +
         `(sudo chown -R ${uid}:${gid} ./data) or remove PUID/PGID from compose.yaml ` +
         `so Pier runs as the directory's owner, then recreate the container.`
       );
     }
+    const writable =
+      (st.mode & 0o200) !== 0 ||
+      (gid != null && st.gid === gid && (st.mode & 0o020) !== 0) ||
+      (st.mode & 0o002) !== 0;
+    if (!writable) {
+      return (
+        `${report} — the mode grants no write permission. ` +
+        `Run sudo chmod u+w ./data (or 755) and restart the container.`
+      );
+    }
+    return (
+      `${report}, which looks correct — ` +
+      `check extended ACLs (Synology: ls -le ./data), that the mount isn't read-only, ` +
+      `and that the volume has free space.`
+    );
   } catch {
-    /* stat failed — report the process ids only */
+    return `Pier is running as uid=${uid ?? "?"} gid=${gid ?? "?"} (could not stat the data dir).`;
   }
-  return (
-    `Pier is running as uid=${uid ?? "?"} gid=${gid ?? "?"}${owner}, which looks correct — ` +
-    `check extended ACLs (Synology: ls -le ./data), that the mount isn't read-only, ` +
-    `and that the volume has free space.`
-  );
 }
 
 function open(): Database.Database {

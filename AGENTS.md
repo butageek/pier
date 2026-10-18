@@ -79,7 +79,7 @@ PIER_KEY=x node agent/index.mjs   # run the agent standalone (zero deps)
 | `src/components/*` | device card/form, add + tile dialogs, icon/group pickers, `logo.tsx` (brand mark, supports `full` and `mark` variants) |
 | `src/app/icon.svg` · `apple-icon.svg` | Next.js vector favicon and Apple touch icon routes (The Monogram P-Dock) |
 | `agent/index.mjs` | the whole agent: token auth, `/info` `/containers` `/stats` `/container-stats` `/health` |
-| `install.sh` · `Dockerfile` · `docker-entrypoint.sh` · `compose.yaml` | the three deployment paths (see above; the entrypoint chowns the data volume then drops privileges) |
+| `install.sh` · `Dockerfile` · `docker-entrypoint.sh` · `compose.yaml` | the three deployment paths (see above; the entrypoint self-heals data-volume ownership and permissions, then drops privileges) |
 
 ## Conventions & gotchas
 
