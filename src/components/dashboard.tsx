@@ -25,9 +25,9 @@ import {
 
 const SERVER_THEME_CONFIG: ThemeConfig = {
   mode: "system",
-  darkTheme: "bauhaus-dark",
-  lightTheme: "bauhaus-studio",
-  effectiveTheme: "bauhaus-dark",
+  darkTheme: "monokai-synth",
+  lightTheme: "opal-glass",
+  effectiveTheme: "monokai-synth",
   isDark: true,
 };
 
@@ -643,16 +643,12 @@ export function Dashboard() {
                     title={editLayout ? "Drag to reorder groups" : undefined}
                     className={cn(
                       "mb-2.5 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase",
-                      theme === "bauhaus-studio" && "font-black text-black tracking-normal",
-                      theme === "bauhaus-dark" && "font-black text-white tracking-normal",
-                      (theme === "cad-blueprint" || theme === "cad-dark") && "font-mono text-primary",
                       editLayout &&
                         "w-fit cursor-grab px-1 select-none transition-[opacity,transform,scale] duration-200 ease-out active:cursor-grabbing",
                       dragGroup === group && "scale-95 opacity-40"
                     )}
                   >
                     {editLayout && <GripVertical className="size-3.5 text-muted-foreground/60" />}
-                    {(theme === "cad-blueprint" || theme === "cad-dark") && <span className="text-primary font-mono text-[10px] mr-1">§</span>}
                     {group}
                   </h3>
                 )}
@@ -691,83 +687,32 @@ export function Dashboard() {
 
   return (
     <div className="space-y-8 pb-16">
-      {/* 1. Theme-Specific Telemetry Ribbons */}
-      {theme === "bauhaus-studio" && (
-        <div className="flex flex-wrap items-center justify-between gap-3 font-sans text-xs px-4 py-2 rounded-lg border-2 border-[#121316] bg-white text-[#121316] shadow-[3px_3px_0px_#121316]">
-          <div className="flex items-center gap-3 font-extrabold uppercase tracking-tight">
-            <span className="bg-[#facc15] px-2 py-0.5 border border-[#121316] shadow-[1px_1px_0px_#121316]">
-              BAUHAUS 1919
-            </span>
-            <span>FORM FOLLOWS FUNCTION // ARCHITECTURE</span>
-          </div>
-          <div className="font-mono text-[11px] font-bold text-blue-700">
-            {visible?.length ?? 0} ACTIVE DOCKS
-          </div>
-        </div>
-      )}
-
-      {theme === "bauhaus-dark" && (
-        <div className="flex flex-wrap items-center justify-between gap-3 font-sans text-xs px-4 py-2 rounded-lg border-2 border-[#f9f8f6] bg-[#1c1d22] text-[#f9f8f6] shadow-[3px_3px_0px_#facc15]">
-          <div className="flex items-center gap-3 font-extrabold uppercase tracking-tight">
-            <span className="bg-[#facc15] text-[#121316] px-2 py-0.5 border border-[#f9f8f6] shadow-[1px_1px_0px_#facc15]">
-              BAUHAUS NOCTURNE
-            </span>
-            <span>FORM FOLLOWS FUNCTION // ATELIER NACHT</span>
-          </div>
-          <div className="font-mono text-[11px] font-bold text-[#3b82f6]">
-            {visible?.length ?? 0} ACTIVE DOCKS
-          </div>
-        </div>
-      )}
-
-      {theme === "cad-blueprint" && (
-        <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-[11px] px-4 py-2 rounded-xs border border-blue-600/30 bg-blue-50/50 text-blue-900">
-          <div className="flex items-center gap-3">
-            <span className="font-bold text-blue-700 bg-blue-100/80 px-1.5 py-0.5 rounded-xs border border-blue-600/30">SCALE 1:1</span>
-            <span className="font-medium">|&lt;--- SCHEMATIC ARCHITECTURE: DISTRIBUTED HOMELAB ---&gt;|</span>
-          </div>
-          <div className="text-blue-700 font-mono text-[10px]">
-            SPEC: RFC-1918 · DWG-REV: 2026.4
-          </div>
-        </div>
-      )}
-
-      {theme === "cad-dark" && (
-        <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-[11px] px-4 py-2 rounded-xs border border-sky-400/30 bg-[#0d172a] text-sky-200">
-          <div className="flex items-center gap-3">
-            <span className="font-bold text-sky-400 bg-sky-950/80 px-1.5 py-0.5 rounded-xs border border-sky-400/30">SCALE 1:1</span>
-            <span className="font-medium">|&lt;--- NIGHT SCHEMATIC: DISTRIBUTED HOMELAB ---&gt;|</span>
-          </div>
-          <div className="text-sky-400 font-mono text-[10px]">
-            SPEC: RFC-1918 · DWG-REV: 2026.NIGHT
-          </div>
-        </div>
-      )}
-
-      {theme === "pinboard-atelier" && (
-        <div className="flex flex-wrap items-center justify-between gap-3 font-sans text-xs px-5 py-2.5 rounded-2xl border border-[#ebd9c8] bg-white/90 text-stone-700 shadow-xs">
+      {theme === "opal-glass" && (
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs px-5 py-2.5 rounded-3xl border border-white/85 bg-white/60 backdrop-blur-xl text-slate-600 shadow-[0_8px_24px_-12px_rgba(100,115,145,0.2),inset_0_1.5px_2px_rgba(255,255,255,0.95)]">
           <div className="flex items-center gap-2.5">
-            <span className="text-base">📌</span>
-            <span className="font-bold text-stone-900">Homelab Atelier Studio</span>
-            <span className="text-stone-300">·</span>
-            <span className="text-stone-500 font-mono text-[11px]">{visible?.length ?? 0} active service notes</span>
+            <span className="text-base">🫧</span>
+            <span className="font-bold tracking-tight text-[#0f172a]">Opal Spatial Dock</span>
+            <span className="text-slate-400">·</span>
+            <span className="text-slate-500 text-[11px]">{visible?.length ?? 0} services in the aura</span>
           </div>
-          <span className="font-mono text-[11px] text-orange-700 bg-orange-100/60 px-2.5 py-0.5 rounded-full border border-orange-200">
-            ⚡ all docks operating smoothly
+          <span className="text-[11px] font-semibold text-[#0284c7] bg-white/80 px-2.5 py-0.5 rounded-full border border-white/95 shadow-[inset_0_1px_1px_#ffffff]">
+            ⚡ prismatic telemetry nominal
           </span>
         </div>
       )}
 
-      {theme === "pinboard-dark" && (
-        <div className="flex flex-wrap items-center justify-between gap-3 font-sans text-xs px-5 py-2.5 rounded-2xl border border-[#423932] bg-[#25201c] text-stone-300 shadow-xs">
-          <div className="flex items-center gap-2.5">
-            <span className="text-base">📌</span>
-            <span className="font-bold text-stone-100">Midnight Atelier Corkboard</span>
-            <span className="text-stone-500">·</span>
-            <span className="text-stone-400 font-mono text-[11px]">{visible?.length ?? 0} active service notes</span>
+      {theme === "monokai-synth" && (
+        <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-[11px] px-4 py-2.5 rounded-2xl border border-[#403e41] bg-[#2d2a2e]/80 backdrop-blur-xl text-[#939293] shadow-[0_20px_50px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.25)]">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="font-bold text-[#ff6188] bg-[#ff618818] border border-[#ff618844] px-1.5 py-0.5 rounded-md">
+              SYNTH://
+            </span>
+            <span className="font-bold uppercase tracking-[0.05em] text-[#fcfcfa]">Monokai Synth Dock</span>
+            <span className="text-[#403e41]">|</span>
+            <span>{visible?.length ?? 0} ACTIVE SERVICES</span>
           </div>
-          <span className="font-mono text-[11px] text-amber-300 bg-amber-950/60 px-2.5 py-0.5 rounded-full border border-amber-600/40">
-            ⚡ night shift active
+          <span className="text-[#ffd866] bg-[#ffd86618] border border-[#ffd86644] px-2.5 py-0.5 rounded-md">
+            [ ALL SYSTEMS NOMINAL ]
           </span>
         </div>
       )}
@@ -784,7 +729,6 @@ export function Dashboard() {
                 key={d.id}
                 device={d}
                 status={statuses[d.id] ?? null}
-                theme={theme}
                 guestLinks={guestLinks}
                 onScan={scanDevice}
                 onEdit={(d) => {

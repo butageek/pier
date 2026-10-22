@@ -1,13 +1,30 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import {
+  Fira_Code as FiraCode,
+  JetBrains_Mono as JetBrainsMono,
+  Plus_Jakarta_Sans as PlusJakartaSans,
+} from "next/font/google";
 import Link from "next/link";
 import { Toaster } from "@/components/ui/sonner";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Theme fonts — there is no base sans (every theme overrides --font-geist-sans,
+// see globals.css): Opal Glass → Plus Jakarta Sans; Monokai Synth → Fira Code
+// body + JetBrains Mono headings.
+const jakartaSans = PlusJakartaSans({
+  variable: "--font-jakarta",
+  subsets: ["latin"],
+});
+
+const firaCode = FiraCode({
+  variable: "--font-fira",
+  subsets: ["latin"],
+});
+
+const jetbrainsMono = JetBrainsMono({
+  variable: "--font-jetbrains",
   subsets: ["latin"],
 });
 
@@ -18,11 +35,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${geistSans.variable} dark h-full antialiased`}>
+    <html lang="en" suppressHydrationWarning className={`${jakartaSans.variable} ${firaCode.variable} ${jetbrainsMono.variable} dark h-full antialiased`}>
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var m=localStorage.getItem('pier-mode')||'system';var dt=localStorage.getItem('pier-dark-theme')||'bauhaus-dark';var lt=localStorage.getItem('pier-light-theme')||'bauhaus-studio';var validDark=['bauhaus-dark','cad-dark','pinboard-dark'];var validLight=['bauhaus-studio','cad-blueprint','pinboard-atelier'];if(validDark.indexOf(dt)===-1)dt='bauhaus-dark';if(validLight.indexOf(lt)===-1)lt='bauhaus-studio';var sysDark=window.matchMedia('(prefers-color-scheme: dark)').matches;var isDark=m==='dark'||(m==='system'&&sysDark);var res=isDark?dt:lt;document.documentElement.setAttribute('data-theme',res);if(isDark){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}catch(e){}})();`,
+            __html: `(function(){try{var m=localStorage.getItem('pier-mode')||'system';var dt=localStorage.getItem('pier-dark-theme')||'monokai-synth';var lt=localStorage.getItem('pier-light-theme')||'opal-glass';if(dt!=='monokai-synth')dt='monokai-synth';if(lt!=='opal-glass')lt='opal-glass';var sysDark=window.matchMedia('(prefers-color-scheme: dark)').matches;var isDark=m==='dark'||(m==='system'&&sysDark);var res=isDark?dt:lt;document.documentElement.setAttribute('data-theme',res);if(isDark){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}catch(e){}})();`,
           }}
         />
       </head>

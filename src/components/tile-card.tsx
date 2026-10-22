@@ -80,13 +80,6 @@ function StatusDot({ tile, health }: { tile: EnrichedTile; health?: TileHealth }
   );
 }
 
-export const PINBOARD_TAPES = [
-  "rgba(250, 204, 21, 0.75)",
-  "rgba(52, 211, 153, 0.75)",
-  "rgba(244, 114, 182, 0.75)",
-  "rgba(96, 165, 250, 0.75)",
-];
-
 export function TileCard({
   tile,
   health,
@@ -158,194 +151,62 @@ export function TileCard({
 
   let content: React.ReactNode;
 
-  if (theme === "bauhaus-studio") {
-    // Light 1: Bauhaus Modern Architectural Exhibition Card (Compact horizontal)
+  if (theme === "opal-glass") {
+    // Opal Glass — frosted milk-glass bento capsule (compact horizontal)
     content = (
       <div className="flex items-center h-full gap-3.5 p-3.5">
         {renderIcon(
           "size-11",
-          "rounded-lg",
-          "bg-white border-2 border-[#121316] shadow-[2px_2px_0px_#121316]"
+          "rounded-2xl",
+          "bg-white/80 border border-white/95 shadow-[0_4px_12px_rgba(100,115,145,0.12),inset_0_1.5px_2px_rgba(255,255,255,0.95)]"
         )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-extrabold tracking-tight text-[#121316] transition-colors group-hover:text-blue-700">
+            <span className="truncate text-sm font-bold tracking-tight text-[#0f172a] transition-colors group-hover:text-[#0284c7]">
               {tile.title}
             </span>
-            <div className="inline-flex items-center gap-1 font-mono text-[9px] font-bold text-emerald-950 bg-emerald-100 border border-[#121316] px-1.5 py-0.2 rounded-full shadow-[1px_1px_0px_#121316] shrink-0">
-              <span className="size-1.5 rounded-full bg-emerald-500 border border-[#121316]" />
-              <span>{health?.ms ? `${health.ms}ms` : "READY"}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 mt-1">
-            {tile.group_name && (
-              <span className="bg-[#facc15] text-[#121316] font-mono text-[9px] font-bold px-1.5 py-0.2 border border-[#121316] rounded shadow-[1px_1px_0px_#121316] shrink-0">
-                {tile.group_name}
-              </span>
-            )}
-            <span className="truncate text-xs font-medium text-[#595d66]">
-              {tile.description || tile.url.replace(/^https?:\/\//, "")}
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  } else if (theme === "bauhaus-dark") {
-    // Dark 1: Bauhaus Nocturne Constructivist Card (Compact horizontal)
-    content = (
-      <div className="flex items-center h-full gap-3.5 p-3.5">
-        {renderIcon(
-          "size-11",
-          "rounded-lg",
-          "bg-[#1c1d22] border-2 border-[#f9f8f6] shadow-[2px_2px_0px_#facc15]"
-        )}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-extrabold tracking-tight text-[#f9f8f6] transition-colors group-hover:text-blue-400">
-              {tile.title}
-            </span>
-            <div className="inline-flex items-center gap-1 font-mono text-[9px] font-bold text-emerald-300 bg-emerald-950/80 border border-[#f9f8f6] px-1.5 py-0.2 rounded-full shadow-[1px_1px_0px_#facc15] shrink-0">
-              <span className="size-1.5 rounded-full bg-emerald-400 border border-[#f9f8f6]" />
-              <span>{health?.ms ? `${health.ms}ms` : "READY"}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 mt-1">
-            {tile.group_name && (
-              <span className="bg-[#facc15] text-[#121316] font-mono text-[9px] font-bold px-1.5 py-0.2 border border-[#f9f8f6] rounded shadow-[1px_1px_0px_#facc15] shrink-0">
-                {tile.group_name}
-              </span>
-            )}
-            <span className="truncate text-xs font-medium text-[#9ca3af]">
-              {tile.description || tile.url.replace(/^https?:\/\//, "")}
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  } else if (theme === "cad-blueprint") {
-    // Light 2: Technical Drafting Vellum Schematic (Compact horizontal)
-    content = (
-      <div className="flex items-center h-full gap-3.5 p-3.5">
-        {renderIcon(
-          "size-10",
-          "rounded-xs",
-          "bg-blue-50/70 border border-blue-600/30"
-        )}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-bold tracking-tight text-slate-900 transition-colors group-hover:text-blue-700">
-              {tile.title}
-            </span>
-            <span className="font-mono text-[9px] font-bold text-blue-800 bg-blue-100/70 border border-blue-600/30 px-1.5 py-0.2 rounded-xs shrink-0">
-              DWG #{String(tile.id).padStart(2, "0")} · {health?.ms ? `${health.ms}ms` : "OK"}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 mt-0.5">
-            {tile.group_name && (
-              <span className="font-mono text-[9px] text-blue-700 font-semibold shrink-0">
-                [{tile.group_name}]
-              </span>
-            )}
-            <span className="truncate font-mono text-xs text-slate-500">
-              {tile.description || tile.url.replace(/^https?:\/\//, "")}
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  } else if (theme === "cad-dark") {
-    // Dark 2: Technical CAD Night Schematic (Compact horizontal)
-    content = (
-      <div className="flex items-center h-full gap-3.5 p-3.5">
-        {renderIcon(
-          "size-10",
-          "rounded-xs",
-          "bg-sky-950/40 border border-sky-400/40"
-        )}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-bold tracking-tight text-[#f0f6fc] transition-colors group-hover:text-sky-300">
-              {tile.title}
-            </span>
-            <span className="font-mono text-[9px] font-bold text-sky-300 bg-sky-950/80 border border-sky-400/40 px-1.5 py-0.2 rounded-xs shrink-0">
-              DWG #{String(tile.id).padStart(2, "0")} · {health?.ms ? `${health.ms}ms` : "OK"}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 mt-0.5">
-            {tile.group_name && (
-              <span className="font-mono text-[9px] text-sky-400 font-semibold shrink-0">
-                [{tile.group_name}]
-              </span>
-            )}
-            <span className="truncate font-mono text-xs text-slate-400">
-              {tile.description || tile.url.replace(/^https?:\/\//, "")}
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  } else if (theme === "pinboard-atelier") {
-    // Light 3: Creative Pinboard Sticky Note (Compact horizontal)
-    const tapeColor = PINBOARD_TAPES[tile.id % PINBOARD_TAPES.length];
-    content = (
-      <div className="flex items-center h-full gap-3.5 p-3.5 pt-4.5 relative">
-        <div className="washi-tape-strip" style={{ backgroundColor: tapeColor }} />
-        {renderIcon(
-          "size-10",
-          "rounded-xl",
-          "bg-amber-50/70 border border-amber-200/70 shadow-xs"
-        )}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-bold text-stone-800 transition-colors group-hover:text-orange-600">
-              {tile.title}
-            </span>
-            <div className="inline-flex items-center gap-1 font-mono text-[9px] font-semibold text-amber-900 bg-amber-100/80 border border-amber-300/60 px-1.5 py-0.2 rounded-full shadow-xs shrink-0">
+            <div className="inline-flex items-center gap-1 text-[9px] font-bold text-[#0284c7] bg-white/85 border border-white/95 px-1.5 py-0.2 rounded-full shadow-[0_2px_8px_rgba(100,115,145,0.1),inset_0_1px_1px_#ffffff] shrink-0">
               <span className="size-1.5 rounded-full bg-emerald-500" />
               <span>{health?.ms ? `${health.ms}ms` : "ready"}</span>
             </div>
           </div>
           <div className="flex items-center gap-2 mt-0.5">
             {tile.group_name && (
-              <span className="bg-stone-100/90 px-1.5 py-0.2 rounded border border-stone-200 text-stone-700 text-[9px] font-medium shrink-0">
+              <span className="bg-white/70 border border-white/95 text-[#64748b] text-[9px] font-semibold px-1.5 py-0.2 rounded-full shrink-0">
                 {tile.group_name}
               </span>
             )}
-            <span className="truncate text-xs text-stone-500">
+            <span className="truncate text-xs font-medium text-[#64748b]">
               {tile.description || tile.url.replace(/^https?:\/\//, "")}
             </span>
           </div>
         </div>
       </div>
     );
-  } else if (theme === "pinboard-dark") {
-    // Dark 3: Pinboard Midnight Sticky Note (Compact horizontal)
-    const tapeColor = PINBOARD_TAPES[tile.id % PINBOARD_TAPES.length];
+  } else if (theme === "monokai-synth") {
+    // Monokai Synth — terminal telemetry card (compact horizontal)
     content = (
-      <div className="flex items-center h-full gap-3.5 p-3.5 pt-4.5 relative">
-        <div className="washi-tape-strip" style={{ backgroundColor: tapeColor }} />
+      <div className="flex items-center h-full gap-3.5 p-3.5 font-mono">
         {renderIcon(
-          "size-10",
+          "size-11",
           "rounded-xl",
-          "bg-amber-950/30 border border-amber-600/30 shadow-xs"
+          "bg-[#221f22] border border-[#403e41] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]"
         )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-bold text-stone-200 transition-colors group-hover:text-amber-400">
+            <span className="truncate text-sm font-bold text-[#fcfcfa] transition-colors group-hover:text-[#78dce8]">
               {tile.title}
             </span>
-            <div className="inline-flex items-center gap-1 font-mono text-[9px] font-semibold text-amber-200 bg-amber-950/70 border border-amber-700/50 px-1.5 py-0.2 rounded-full shadow-xs shrink-0">
-              <span className="size-1.5 rounded-full bg-emerald-400" />
-              <span>{health?.ms ? `${health.ms}ms` : "ready"}</span>
+            <div className="inline-flex items-center gap-1 text-[9px] font-bold text-[#ff6188] bg-[#ff618818] border border-[#ff618844] px-1.5 py-0.2 rounded-md shrink-0">
+              <span className="size-1.5 rounded-full bg-[#a9dc76]" />
+              <span>{health?.ms ? `${health.ms}ms` : "RDY"}</span>
             </div>
           </div>
           <div className="flex items-center gap-2 mt-0.5">
             {tile.group_name && (
-              <span className="bg-stone-800/90 px-1.5 py-0.2 rounded border border-stone-700 text-stone-300 text-[9px] font-medium shrink-0">
-                {tile.group_name}
-              </span>
+              <span className="text-[9px] font-semibold text-[#ffd866] shrink-0">[{tile.group_name}]</span>
             )}
-            <span className="truncate text-xs text-stone-400">
+            <span className="truncate text-xs text-[#939293]">
               {tile.description || tile.url.replace(/^https?:\/\//, "")}
             </span>
           </div>
@@ -372,12 +233,6 @@ export function TileCard({
     );
   }
 
-  const isPinboard = theme === "pinboard-atelier" || theme === "pinboard-dark";
-  const tiltClass =
-    isPinboard && !reordering
-      ? `pinboard-tilt-${tile.id % 4} transition-transform duration-200 ease-out`
-      : "";
-
   return (
     <div
       ref={nodeRef}
@@ -385,7 +240,6 @@ export function TileCard({
         "group relative rounded-xl transition-[opacity,transform,scale] duration-200 ease-out",
         reordering && "cursor-grab select-none active:cursor-grabbing",
         isDragging && "scale-95 opacity-40",
-        tiltClass
       )}
       draggable={reordering}
       onDragStart={

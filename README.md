@@ -54,11 +54,20 @@ host Pier talks to directly. No SSH tunnels, no exposed Docker API.
    filters links across titles, URLs, descriptions, and groups in real time. Category pill tabs
    provide instant group filtering without visual clutter.
 7. **Themes & Appearance studio** — clean two-tier theme system supporting **Auto (System)**,
-   **Dark**, and **Light** modes with curated, distinct palettes:
-   - **Dark**: *Bauhaus Nocturne* (constructivist dark gallery with stark outlines, canary block shadows, electric cobalt accents, and primary contrast), *CAD Night Schematic* (midnight drafting blueprint with glowing cyan grid lines, precision crosshairs, and DWG notation), and *Pinboard Midnight* (night workshop bulletin board with dark espresso cork canvas, translucent washi tape, kraft memo cards, and sticky tilts).
-   - **Light**: *Bauhaus Studio* (architectural graphic studio with 2px outlines & hard block drop-shadows), *CAD Blueprint* (technical drafting vellum on sky grid with precision crosshairs & dimension lines), and *Pinboard Atelier* (creative workshop bulletin board with washi tape headers & paper shadows).
+   **Dark**, and **Light** modes with one curated palette per mode:
+   - **Dark**: *Monokai Synth* — volcanic charcoal code-editor palette with electric coral,
+     cyber mint, canary yellow, and lime syntax accents; Fira Code terminal typography
+     (JetBrains Mono headings), frosted-glass cards with specular rims, and a perspective
+     wireframe grid receding to the horizon.
+   - **Light**: *Opal Glass* — translucent spatial-computing light mode with dense white milk-glass
+     tiles framed by double glowing specular rims, debossed slate control wells (search, inputs,
+     meters), prismatic aurora mesh glow, luminous sky-blue accents, 28px squircle bento geometry,
+     and geometric bento typography (Plus Jakarta Sans).
    - When set to Auto, Pier dynamically switches between your chosen light and dark preferences
-     following your OS scheme, with synchronous `<head>` script execution eliminating theme flash (FOUC). Dedicated CSS treatments apply authentic borders, shadows, corner markers, and progress meters per theme.
+     following your OS scheme, with synchronous `<head>` script execution eliminating theme flash (FOUC).
+     Each theme is a full design treatment — borders, shadows, corner radii, meters — right down to
+     its own self-hosted typeface: there is no default font, the whole UI renders in the active
+     theme's (Plus Jakarta Sans in light; Fira Code terminal copy with JetBrains Mono headings in dark).
 
 ## Getting started
 

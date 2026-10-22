@@ -1,6 +1,6 @@
 export type ColorMode = "system" | "dark" | "light";
-export type DarkTheme = "bauhaus-dark" | "cad-dark" | "pinboard-dark";
-export type LightTheme = "bauhaus-studio" | "cad-blueprint" | "pinboard-atelier";
+export type DarkTheme = "monokai-synth";
+export type LightTheme = "opal-glass";
 export type ConcreteTheme = DarkTheme | LightTheme;
 
 export interface ThemeConfig {
@@ -21,49 +21,21 @@ export interface ThemeMeta<T extends string> {
 
 export const DARK_THEMES: ThemeMeta<DarkTheme>[] = [
   {
-    id: "bauhaus-dark",
-    label: "Bauhaus Nocturne",
-    description: "Constructivist dark gallery with stark outlines, canary yellow block shadows, and electric cobalt accents.",
-    accent: "#3b82f6",
-    previewBg: "#121316",
-  },
-  {
-    id: "cad-dark",
-    label: "CAD Night Schematic",
-    description: "Midnight drafting blueprint with glowing cyan grid lines, precision crosshairs (+), and schematic DWG notation.",
-    accent: "#38bdf8",
-    previewBg: "#070d19",
-  },
-  {
-    id: "pinboard-dark",
-    label: "Pinboard Midnight",
-    description: "Night workshop bulletin board with dark espresso cork canvas, translucent washi tape, kraft memo cards, and sticky tilts.",
-    accent: "#fb923c",
-    previewBg: "#181513",
+    id: "monokai-synth",
+    label: "Monokai Synth",
+    description: "Volcanic charcoal code-editor palette with electric coral, cyber mint, canary yellow, and lime syntax accents on a frosted terminal wireframe grid.",
+    accent: "#ff6188",
+    previewBg: "#221f22",
   },
 ];
 
 export const LIGHT_THEMES: ThemeMeta<LightTheme>[] = [
   {
-    id: "bauhaus-studio",
-    label: "Bauhaus Studio",
-    description: "Architectural Swiss graphic studio with stark 2px black outlines, hard offset block shadows (4px 4px), bold cobalt blue, and canary yellow.",
-    accent: "#1e40af",
-    previewBg: "#f9f8f6",
-  },
-  {
-    id: "cad-blueprint",
-    label: "CAD Blueprint",
-    description: "Technical drafting vellum on sky grid with precision cobalt dimension lines, crosshairs (+), and schematic component borders.",
-    accent: "#1d4ed8",
-    previewBg: "#eef5fc",
-  },
-  {
-    id: "pinboard-atelier",
-    label: "Pinboard Atelier",
-    description: "Creative workshop bulletin board with warm cork canvas, washi tape card headers, sticky note tilts, and terracotta accents.",
-    accent: "#ea580c",
-    previewBg: "#f4eee2",
+    id: "opal-glass",
+    label: "Opal Glass",
+    description: "Translucent spatial-computing light mode with dense white milk glass tiles, prismatic aurora mesh glow, and luminous sky-blue accents.",
+    accent: "#0284c7",
+    previewBg: "#f1f5f9",
   },
 ];
 
@@ -74,20 +46,25 @@ const LIGHT_THEME_KEY = "pier-light-theme";
 type Listener = () => void;
 const listeners = new Set<Listener>();
 
-const VALID_DARK_THEMES: DarkTheme[] = ["bauhaus-dark", "cad-dark", "pinboard-dark"];
-const VALID_LIGHT_THEMES: LightTheme[] = ["bauhaus-studio", "cad-blueprint", "pinboard-atelier"];
+/** Fallback config when storage is missing, blocked, or holds a retired theme id. */
+const DEFAULTS = {
+  mode: "system",
+  darkTheme: "monokai-synth",
+  lightTheme: "opal-glass",
+} as const;
+
+const VALID_DARK_THEMES: DarkTheme[] = DARK_THEMES.map((t) => t.id);
+const VALID_LIGHT_THEMES: LightTheme[] = LIGHT_THEMES.map((t) => t.id);
 
 let currentConfig: ThemeConfig = {
-  mode: "system",
-  darkTheme: "bauhaus-dark",
-  lightTheme: "bauhaus-studio",
-  effectiveTheme: "bauhaus-dark",
+  ...DEFAULTS,
+  effectiveTheme: DEFAULTS.darkTheme,
   isDark: true,
 };
 
 function readStoredConfig(): { mode: ColorMode; darkTheme: DarkTheme; lightTheme: LightTheme } {
   if (typeof window === "undefined") {
-    return { mode: "system", darkTheme: "bauhaus-dark", lightTheme: "bauhaus-studio" };
+    return { ...DEFAULTS };
   }
 
   try {
@@ -96,16 +73,16 @@ function readStoredConfig(): { mode: ColorMode; darkTheme: DarkTheme; lightTheme
     let lightTheme = localStorage.getItem(LIGHT_THEME_KEY) as LightTheme | null;
 
     if (!mode || !["system", "dark", "light"].includes(mode)) mode = "system";
-    if (!darkTheme || !VALID_DARK_THEMES.includes(darkTheme)) darkTheme = "bauhaus-dark";
-    if (!lightTheme || !VALID_LIGHT_THEMES.includes(lightTheme)) lightTheme = "bauhaus-studio";
+    if (!darkTheme || !VALID_DARK_THEMES.includes(darkTheme)) darkTheme = DEFAULTS.darkTheme;
+    if (!lightTheme || !VALID_LIGHT_THEMES.includes(lightTheme)) lightTheme = DEFAULTS.lightTheme;
 
     return { mode, darkTheme, lightTheme };
   } catch {
-    return { mode: "system", darkTheme: "bauhaus-dark", lightTheme: "bauhaus-studio" };
+    return { ...DEFAULTS };
   }
 }
 
-export function computeEffectiveTheme(
+function computeEffectiveTheme(
   mode: ColorMode,
   darkTheme: DarkTheme,
   lightTheme: LightTheme

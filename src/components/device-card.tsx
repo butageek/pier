@@ -25,8 +25,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { formatBytes, formatUptime, osLabel, timeAgo } from "@/lib/format";
 import type { ContainerStatus, DeviceScanInfo, DeviceStatus, PveGuestStatus, SafeDevice } from "@/lib/types";
-import type { ConcreteTheme } from "@/lib/theme";
-import { PINBOARD_TAPES } from "@/components/tile-card";
 
 function Bar({ pct, label }: { pct: number | null; label: string }) {
   const v = pct == null ? 0 : Math.min(pct, 100);
@@ -271,7 +269,6 @@ function ContainerRow({ container, href }: { container: ContainerStatus; href?: 
 export function DeviceCard({
   device,
   status,
-  theme,
   guestLinks,
   onScan,
   onEdit,
@@ -286,8 +283,6 @@ export function DeviceCard({
 }: {
   device: SafeDevice;
   status: DeviceStatus | null;
-  /** Active theme to render theme-specific layout treatments */
-  theme?: ConcreteTheme;
   /** Proxmox only: "deviceId|guestId" -> discovered web URL, for clickable guest names. */
   guestLinks?: Record<string, string>;
   onScan: (device: SafeDevice) => void;
@@ -321,12 +316,6 @@ export function DeviceCard({
     onReorderOver?.(device, e.timeStamp);
   };
 
-  const isPinboard = theme === "pinboard-atelier" || theme === "pinboard-dark";
-  const tiltClass =
-    isPinboard && !reordering
-      ? `pinboard-tilt-${device.id % 4} transition-transform duration-200 ease-out`
-      : "";
-
   return (
     <div
       ref={nodeRef}
@@ -334,13 +323,11 @@ export function DeviceCard({
       title={reordering ? "Drag to reorder" : undefined}
       className={cn(
         "theme-card group relative rounded-xl border bg-card/90 backdrop-blur-sm p-4 transition-[opacity,transform,scale] duration-200 ease-out hover:border-primary/40",
-        !isPinboard && "overflow-hidden",
-        isPinboard && "pt-5",
+        "overflow-hidden",
         reordering
           ? "cursor-grab border-dashed border-primary/50 select-none active:cursor-grabbing"
           : "border-border/70",
         isDragging && "scale-95 opacity-40",
-        tiltClass
       )}
       draggable={reordering}
       onDragStart={
@@ -357,18 +344,7 @@ export function DeviceCard({
       onDrop={reordering ? (e) => e.preventDefault() : undefined}
       onDragEnd={reordering ? () => onReorderEnd?.() : undefined}
     >
-      {isPinboard && (
-        <div
-          className="washi-tape-strip"
-          style={{
-            backgroundColor: PINBOARD_TAPES[device.id % PINBOARD_TAPES.length],
-            width: "84px",
-          }}
-        />
-      )}
-      {!isPinboard && (
-        <div className="absolute inset-x-0 top-0 h-0.5 bg-accent-gradient opacity-80" />
-      )}
+      <div className="absolute inset-x-0 top-0 h-0.5 bg-accent-gradient opacity-80" />
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -396,16 +372,6 @@ export function DeviceCard({
               </>
             )}
           </p>
-          {theme === "cad-blueprint" && (
-            <div className="font-mono text-[9px] text-blue-700/80 mt-1 truncate">
-              |&lt;--- SCHEMATIC: {info.cpuCount ?? "?"} CORES · {device.host} ---&gt;|
-            </div>
-          )}
-          {theme === "cad-dark" && (
-            <div className="font-mono text-[9px] text-sky-400/80 mt-1 truncate">
-              |&lt;--- SCHEMATIC: {info.cpuCount ?? "?"} CORES · {device.host} ---&gt;|
-            </div>
-          )}
         </div>
         {!reordering && (
           <div className="flex items-center gap-0.5">

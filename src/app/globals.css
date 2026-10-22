@@ -49,447 +49,316 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  --radius: 1.25rem;
 
-  /* Default light fallback / Bauhaus Studio */
-  --background: #f9f8f6;
-  --foreground: #121316;
-  --card: #ffffff;
-  --card-foreground: #121316;
-  --popover: #ffffff;
-  --popover-foreground: #121316;
-  --primary: #1e40af;
-  --primary-foreground: #ffffff;
-  --secondary: #f4f3ef;
-  --secondary-foreground: #121316;
-  --muted: #f4f3ef;
-  --muted-foreground: #595d66;
-  --accent: #f4f3ef;
-  --accent-foreground: #1e40af;
-  --destructive: #e11d48;
-  --border: #121316;
-  --input: #121316;
-  --ring: #1e40af;
-  --accent-gradient: linear-gradient(135deg, #1e40af 0%, #facc15 100%);
-  --logo-1: #1e40af;
-  --logo-2: #e11d48;
-  --ambient-1: rgba(30, 64, 175, 0.05);
-  --ambient-2: rgba(250, 204, 21, 0.04);
-}
-
-/* 1. Bauhaus Modern / Editorial Studio (Light Theme 1) */
-html[data-theme="bauhaus-studio"],
-html:not(.dark):not([data-theme]) {
-  --radius: 0.75rem;
-  --background: #f9f8f6;
-  --foreground: #121316;
-  --card: #ffffff;
-  --card-foreground: #121316;
-  --popover: #ffffff;
-  --popover-foreground: #121316;
-  --primary: #1e40af;
-  --primary-foreground: #ffffff;
-  --secondary: #f4f3ef;
-  --secondary-foreground: #121316;
-  --muted: #f4f3ef;
-  --muted-foreground: #595d66;
-  --accent: #f4f3ef;
-  --accent-foreground: #1e40af;
-  --destructive: #e11d48;
-  --border: #121316;
-  --input: #121316;
-  --ring: #1e40af;
-  --accent-gradient: linear-gradient(135deg, #1e40af 0%, #facc15 100%);
-  --logo-1: #1e40af;
-  --logo-2: #e11d48;
-  --ambient-1: rgba(30, 64, 175, 0.05);
-  --ambient-2: rgba(250, 204, 21, 0.04);
-}
-
-/* 2. Technical Drafting Vellum / CAD Blueprint (Light Theme 2) */
-html[data-theme="cad-blueprint"] {
-  --radius: 0.25rem;
-  --background: #eef5fc;
+  /* Default light fallback = Opal Glass */
+  --background: #f1f5f9;
   --foreground: #0f172a;
-  --card: #f8fbff;
-  --card-foreground: #0f172a;
-  --popover: #f8fbff;
-  --popover-foreground: #0f172a;
-  --primary: #1d4ed8;
-  --primary-foreground: #ffffff;
-  --secondary: #e0edfb;
-  --secondary-foreground: #0f172a;
-  --muted: #e0edfb;
-  --muted-foreground: #475569;
-  --accent: #e0edfb;
-  --accent-foreground: #1d4ed8;
-  --destructive: #dc2626;
-  --border: rgba(29, 78, 216, 0.25);
-  --input: rgba(29, 78, 216, 0.35);
-  --ring: #1d4ed8;
-  --accent-gradient: linear-gradient(135deg, #1d4ed8 0%, #0284c7 100%);
-  --logo-1: #1d4ed8;
-  --logo-2: #0284c7;
-  --ambient-1: rgba(29, 78, 216, 0.06);
-  --ambient-2: rgba(2, 132, 199, 0.04);
-}
-
-/* 3. Creative Pinboard / Sticky Notes Atelier (Light Theme 3) */
-html[data-theme="pinboard-atelier"] {
-  --radius: 0.75rem;
-  --background: #f4eee2;
-  --foreground: #292524;
   --card: #ffffff;
-  --card-foreground: #292524;
+  --card-foreground: #0f172a;
   --popover: #ffffff;
-  --popover-foreground: #292524;
-  --primary: #ea580c;
+  --popover-foreground: #0f172a;
+  --primary: #0284c7;
   --primary-foreground: #ffffff;
-  --secondary: #fcf9f2;
-  --secondary-foreground: #292524;
-  --muted: #f5ede1;
-  --muted-foreground: #57534e;
-  --accent: #f5ede1;
-  --accent-foreground: #ea580c;
-  --destructive: #dc2626;
-  --border: #ebd9c8;
-  --input: #ebd9c8;
-  --ring: #ea580c;
-  --accent-gradient: linear-gradient(135deg, #ea580c 0%, #facc15 100%);
-  --logo-1: #ea580c;
-  --logo-2: #facc15;
-  --ambient-1: rgba(234, 88, 12, 0.05);
-  --ambient-2: rgba(250, 204, 21, 0.04);
+  --secondary: #e8eef5;
+  --secondary-foreground: #0f172a;
+  --muted: #e8eef5;
+  --muted-foreground: #64748b;
+  --accent: #e0f2fe;
+  --accent-foreground: #0284c7;
+  --destructive: #e11d48;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #0284c7;
+  --accent-gradient: linear-gradient(135deg, #0284c7 0%, #8b5cf6 100%);
+  --logo-1: #0284c7;
+  --logo-2: #8b5cf6;
+  --font-geist-sans: var(--font-jakarta);
 }
 
-/* 4. Bauhaus Nocturne (Dark Theme 1 - Default Dark) */
-.dark,
-html[data-theme="bauhaus-dark"],
-html.dark:not([data-theme]) {
-  --radius: 0.75rem;
-  --background: #121316;
-  --foreground: #f9f8f6;
-  --card: #1c1d22;
-  --card-foreground: #f9f8f6;
-  --popover: #1c1d22;
-  --popover-foreground: #f9f8f6;
-  --primary: #3b82f6;
+/* Default dark fallback = Monokai Synth */
+.dark {
+  --radius: 0.715rem;
+  --background: #221f22;
+  --foreground: #fcfcfa;
+  --card: #2d2a2e;
+  --card-foreground: #fcfcfa;
+  --popover: #141416;
+  --popover-foreground: #fcfcfa;
+  --primary: #ff6188;
+  --primary-foreground: #000000;
+  --secondary: #403e41;
+  --secondary-foreground: #fcfcfa;
+  --muted: #2d2a2e;
+  --muted-foreground: #939293;
+  --accent: #403e41;
+  --accent-foreground: #78dce8;
+  --destructive: #ff6188;
+  --border: #403e41;
+  --input: #403e41;
+  --ring: #ff6188;
+  --accent-gradient: linear-gradient(135deg, #ff6188 0%, #78dce8 100%);
+  --logo-1: #ff6188;
+  --logo-2: #78dce8;
+  --font-geist-sans: var(--font-fira);
+  font-feature-settings: "zero" on;
+}
+
+/* Opal Milky Glass / Prismatic Aura — spatial computing bento */
+html[data-theme="opal-glass"] {
+  --radius: 1.25rem; /* rounded-xl tiles → 28px squircle curvature */
+  --background: #f1f5f9;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #0284c7;
   --primary-foreground: #ffffff;
-  --secondary: #252830;
-  --secondary-foreground: #f9f8f6;
-  --muted: #252830;
-  --muted-foreground: #9ca3af;
-  --accent: #252830;
-  --accent-foreground: #3b82f6;
-  --destructive: #f43f5e;
-  --border: #f9f8f6;
-  --input: #f9f8f6;
-  --ring: #3b82f6;
-  --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #facc15 100%);
-  --logo-1: #3b82f6;
-  --logo-2: #facc15;
-  --ambient-1: rgba(59, 130, 246, 0.08);
-  --ambient-2: rgba(250, 204, 21, 0.06);
+  --secondary: #e8eef5;
+  --secondary-foreground: #0f172a;
+  --muted: #e8eef5;
+  --muted-foreground: #64748b;
+  --accent: #e0f2fe;
+  --accent-foreground: #0284c7;
+  --destructive: #e11d48;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #0284c7;
+  --accent-gradient: linear-gradient(135deg, #0284c7 0%, #8b5cf6 100%);
+  --logo-1: #0284c7;
+  --logo-2: #8b5cf6;
+  /* Plus Jakarta Sans (loaded in layout.tsx) — geometric neo-grotesk for bento density */
+  --font-geist-sans: var(--font-jakarta);
 }
 
-/* 5. CAD Night Schematic (Dark Theme 2) */
-html[data-theme="cad-dark"] {
-  --radius: 0.25rem;
-  --background: #070d19;
-  --foreground: #f0f6fc;
-  --card: #0d172a;
-  --card-foreground: #f0f6fc;
-  --popover: #0d172a;
-  --popover-foreground: #f0f6fc;
-  --primary: #38bdf8;
-  --primary-foreground: #070d19;
-  --secondary: #132238;
-  --secondary-foreground: #f0f6fc;
-  --muted: #132238;
-  --muted-foreground: #7dd3fc;
-  --accent: #132238;
-  --accent-foreground: #38bdf8;
-  --destructive: #f87171;
-  --border: rgba(56, 189, 248, 0.28);
-  --input: rgba(56, 189, 248, 0.35);
-  --ring: #38bdf8;
-  --accent-gradient: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
-  --logo-1: #38bdf8;
-  --logo-2: #818cf8;
-  --ambient-1: rgba(56, 189, 248, 0.08);
-  --ambient-2: rgba(129, 140, 248, 0.06);
+/* Aurora atmospheric mesh: prismatic light blooms the glass scatters against */
+html[data-theme="opal-glass"] body {
+  background-image:
+    radial-gradient(circle at 12% 8%, rgba(99, 102, 241, 0.2) 0%, transparent 42%),
+    radial-gradient(circle at 88% 12%, rgba(56, 189, 248, 0.18) 0%, transparent 45%),
+    radial-gradient(circle at 8% 90%, rgba(251, 146, 160, 0.1) 0%, transparent 45%),
+    radial-gradient(circle at 92% 82%, rgba(139, 92, 246, 0.1) 0%, transparent 42%);
+  background-attachment: fixed;
 }
 
-/* 6. Pinboard Midnight (Dark Theme 3) */
-html[data-theme="pinboard-dark"] {
-  --radius: 0.75rem;
-  --background: #181513;
-  --foreground: #f5ede3;
-  --card: #25201c;
-  --card-foreground: #f5ede3;
-  --popover: #25201c;
-  --popover-foreground: #f5ede3;
-  --primary: #fb923c;
-  --primary-foreground: #181513;
-  --secondary: #322b26;
-  --secondary-foreground: #f5ede3;
-  --muted: #322b26;
-  --muted-foreground: #a89f91;
-  --accent: #322b26;
-  --accent-foreground: #fb923c;
-  --destructive: #f87171;
-  --border: #423932;
-  --input: #423932;
-  --ring: #fb923c;
-  --accent-gradient: linear-gradient(135deg, #fb923c 0%, #facc15 100%);
-  --logo-1: #fb923c;
-  --logo-2: #facc15;
-  --ambient-1: rgba(251, 146, 60, 0.08);
-  --ambient-2: rgba(250, 204, 21, 0.06);
+/* Tight tracking on headings per the Jakarta bento spec */
+html[data-theme="opal-glass"] :is(h1, h2, h3, h4) {
+  letter-spacing: -0.02em;
+}
+
+/* Dense opal milk glass cards: translucent acrylic + double glowing specular rims */
+html[data-theme="opal-glass"] .theme-card {
+  background-color: rgba(255, 255, 255, 0.45) !important;
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.55) 100%) !important;
+  backdrop-filter: blur(28px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(190%) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.85) !important;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.6),
+    0 16px 36px -12px rgba(100, 115, 145, 0.22),
+    0 4px 14px rgba(100, 115, 145, 0.1),
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.95) !important;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease !important;
+}
+html[data-theme="opal-glass"] a.theme-card:hover {
+  transform: translateY(-3px) scale(1.01) !important;
+  border-color: rgba(255, 255, 255, 0.95) !important;
+  background-color: rgba(255, 255, 255, 0.55) !important;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.65),
+    0 25px 60px -15px rgba(100, 115, 145, 0.28),
+    0 8px 24px rgba(100, 115, 145, 0.12),
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Frosted glass header floating above the aura mesh */
+html[data-theme="opal-glass"] header {
+  background-color: rgba(241, 245, 249, 0.55) !important;
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.45) 100%) !important;
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.85) !important;
+  box-shadow: 0 8px 24px -12px rgba(100, 115, 145, 0.18);
+}
+
+/* Capsule category tabs with specular rim */
+html[data-theme="opal-glass"] .category-tab-btn {
+  border-radius: 9999px !important;
+}
+/* Inactive tabs sit in debossed slate sockets (active keeps its primary pill) */
+html[data-theme="opal-glass"] .category-tab-btn:not(.bg-primary) {
+  background-color: #f1f5f9;
+  box-shadow:
+    inset 0 1px 2px rgba(100, 115, 145, 0.14),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.8);
+}
+
+/* Debossed control wells: opaque slate sockets keep text crisp over blurred glass */
+html[data-theme="opal-glass"] input:not([type="checkbox"], [type="radio"], [type="range"]),
+html[data-theme="opal-glass"] textarea,
+html[data-theme="opal-glass"] select {
+  background-color: #f1f5f9;
+  border-color: #e2e8f0;
+  box-shadow:
+    inset 0 2px 4px rgba(100, 115, 145, 0.14),
+    inset 0 1px 1px rgba(255, 255, 255, 0.85);
+}
+
+/* Primary CTAs are pill capsules per the control spec */
+html[data-theme="opal-glass"] button.bg-accent-gradient {
+  border-radius: 9999px;
+}
+
+/* Debossed opaque meter wells */
+html[data-theme="opal-glass"] .meter-track {
+  background-color: #f1f5f9 !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  box-shadow: inset 0 2px 4px rgba(100, 115, 145, 0.14);
+}
+
+/* Monokai Pro Synth Editor — terminal monospace frosted glass */
+html[data-theme="monokai-synth"] {
+  --radius: 0.715rem; /* rounded-xl cards → 16px */
+  --background: #221f22;
+  --foreground: #fcfcfa;
+  --card: #2d2a2e;
+  --card-foreground: #fcfcfa;
+  --popover: #141416;
+  --popover-foreground: #fcfcfa;
+  --primary: #ff6188;
+  --primary-foreground: #000000;
+  --secondary: #403e41;
+  --secondary-foreground: #fcfcfa;
+  --muted: #2d2a2e;
+  --muted-foreground: #939293;
+  --accent: #403e41;
+  --accent-foreground: #78dce8;
+  --destructive: #ff6188;
+  --border: #403e41;
+  --input: #403e41;
+  --ring: #ff6188;
+  --accent-gradient: linear-gradient(135deg, #ff6188 0%, #78dce8 100%);
+  --logo-1: #ff6188;
+  --logo-2: #78dce8;
+  /* Fira Code terminal body; headings get JetBrains Mono via the rule below */
+  --font-geist-sans: var(--font-fira);
+  font-feature-settings: "zero" on; /* slashed zeros, tabular by design */
+}
+
+/* 20px wireframe grid canvas + 100px major lines */
+html[data-theme="monokai-synth"] body {
+  background-image:
+    linear-gradient(rgba(252, 252, 250, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(252, 252, 250, 0.05) 1px, transparent 1px),
+    linear-gradient(rgba(252, 252, 250, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(252, 252, 250, 0.025) 1px, transparent 1px);
+  background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
+  background-attachment: fixed;
+}
+
+/* Perspective tech wireframe: coral/mint matrix receding to the horizon */
+html[data-theme="monokai-synth"] body::before {
+  content: "";
+  position: fixed;
+  left: -20%;
+  right: -20%;
+  bottom: -12%;
+  height: 46vh;
+  background-image:
+    linear-gradient(rgba(255, 97, 136, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120, 220, 232, 0.08) 1px, transparent 1px);
+  background-size: 44px 44px;
+  transform: perspective(700px) rotateX(62deg);
+  transform-origin: 50% 100%;
+  -webkit-mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.9) 20%, transparent 92%);
+  mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.9) 20%, transparent 92%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Uppercase tracked headings in JetBrains Mono, per the terminal spec */
+html[data-theme="monokai-synth"] :is(h1, h2, h3, h4),
+html.dark:not([data-theme]) :is(h1, h2, h3, h4) {
+  font-family: var(--font-jetbrains), var(--font-fira), monospace;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Frosted editor-slate cards: dark acrylic + specular top rim */
+html[data-theme="monokai-synth"] .theme-card {
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  background-color: rgba(45, 42, 46, 0.78) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+  transition: background-color 0.15s var(--ease), border-color 0.15s var(--ease), box-shadow 0.15s var(--ease), transform 0.15s var(--ease) !important;
+}
+html[data-theme="monokai-synth"] a.theme-card:hover {
+  /* "Brightness flash" via a lighter slate fill. Animating `filter` on a
+     backdrop-filtered card forces per-frame backdrop re-blurs — janky, so we
+     reproduce the flash with cheap paint-only properties instead. The lift is
+     transform-only (compositor), never filter. */
+  background-color: rgba(56, 52, 57, 0.85) !important;
+  border-color: rgba(255, 97, 136, 0.45) !important;
+  transform: translateY(-1px); /* subtle vertical hover lift */
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.5),
+    0 6px 22px rgba(255, 97, 136, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+html[data-theme="monokai-synth"] a.theme-card:active {
+  transform: translateY(2px) !important;
+  transition-duration: 0.06s !important;
+}
+
+/* Frosted charcoal header with specular rim */
+html[data-theme="monokai-synth"] header {
+  background-color: rgba(34, 31, 34, 0.82) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+/* Technical 8px tab corners on category capsules */
+html[data-theme="monokai-synth"] .category-tab-btn {
+  border-radius: 8px !important;
+}
+
+/* Inset dark meter wells */
+html[data-theme="monokai-synth"] .meter-track {
+  background-color: #221f22 !important;
+  border: 1px solid #403e41 !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* Cyberdeck action buttons: 45° cut bottom-right corner, thick bottom/right
+   accent lines, brightness flash on hover, tactile 1px press. Scoped to
+   buttons — the device-card gradient strip is a div and must stay untouched. */
+html[data-theme="monokai-synth"] button.bg-accent-gradient {
+  color: var(--primary-foreground);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.4) !important;
+  border-right: 2px solid rgba(0, 0, 0, 0.4) !important;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%);
+  transition: filter 0.12s ease, transform 0.06s ease !important;
+}
+html[data-theme="monokai-synth"] button.bg-accent-gradient:hover {
+  filter: brightness(1.15);
+}
+html[data-theme="monokai-synth"] button.bg-accent-gradient:active {
+  transform: translateY(1px);
+}
+/* clip-path shears outer focus rings — keep an inset outline for keyboard users */
+html[data-theme="monokai-synth"] button.bg-accent-gradient:focus-visible {
+  outline: 2px solid #ffd866;
+  outline-offset: -4px;
 }
 
 .bg-accent-gradient {
   background-image: var(--accent-gradient);
 }
-
-/* --- Theme-Specific Background Textures --- */
-html[data-theme="bauhaus-studio"] body {
-  background-image: radial-gradient(#121316 0.75px, transparent 0.75px);
-  background-size: 24px 24px;
-  background-attachment: fixed;
-}
-
-html[data-theme="bauhaus-dark"] body,
-html.dark:not([data-theme]) body {
-  background-image: radial-gradient(rgba(249, 248, 246, 0.15) 0.75px, transparent 0.75px);
-  background-size: 24px 24px;
-  background-attachment: fixed;
-}
-
-html[data-theme="cad-blueprint"] body {
-  background-image: 
-    linear-gradient(rgba(29, 78, 216, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(29, 78, 216, 0.08) 1px, transparent 1px),
-    linear-gradient(rgba(29, 78, 216, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(29, 78, 216, 0.03) 1px, transparent 1px);
-  background-size: 80px 80px, 80px 80px, 16px 16px, 16px 16px;
-  background-attachment: fixed;
-}
-
-html[data-theme="cad-dark"] body {
-  background-image: 
-    linear-gradient(rgba(56, 189, 248, 0.12) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(56, 189, 248, 0.12) 1px, transparent 1px),
-    linear-gradient(rgba(56, 189, 248, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(56, 189, 248, 0.04) 1px, transparent 1px);
-  background-size: 80px 80px, 80px 80px, 16px 16px, 16px 16px;
-  background-attachment: fixed;
-}
-
-html[data-theme="pinboard-atelier"] body {
-  background-image: 
-    radial-gradient(circle at 50% 0%, rgba(217, 119, 6, 0.04), transparent 60%),
-    radial-gradient(#d6c7b2 0.8px, transparent 0.8px);
-  background-size: 100% 100%, 20px 20px;
-  background-attachment: fixed;
-}
-
-html[data-theme="pinboard-dark"] body {
-  background-image: 
-    radial-gradient(circle at 50% 0%, rgba(251, 146, 60, 0.06), transparent 60%),
-    radial-gradient(#3a322b 0.8px, transparent 0.8px);
-  background-size: 100% 100%, 20px 20px;
-  background-attachment: fixed;
-}
-
-/* --- Theme-Specific Card & Component Styling --- */
-
-/* 1. Bauhaus Modern / Editorial Studio */
-html[data-theme="bauhaus-studio"] .theme-card {
-  border: 2px solid #121316 !important;
-  box-shadow: 4px 4px 0px #121316 !important;
-  transition: transform 0.15s ease, box-shadow 0.15s ease !important;
-}
-html[data-theme="bauhaus-studio"] a.theme-card:hover {
-  transform: translate(-2px, -2px) !important;
-  box-shadow: 6px 6px 0px #121316 !important;
-}
-html[data-theme="bauhaus-studio"] header {
-  border-bottom: 2px solid #121316 !important;
-  box-shadow: 0 4px 0px rgba(18, 19, 22, 0.06);
-}
-html[data-theme="bauhaus-studio"] .category-tab-btn {
-  border: 1.5px solid #121316 !important;
-  box-shadow: 2px 2px 0px #121316;
-}
-html[data-theme="bauhaus-studio"] .meter-track {
-  border: 1.5px solid #121316 !important;
-  border-radius: 4px !important;
-  background: #f4f3ef !important;
-}
-
-/* 4. Bauhaus Nocturne (Dark) */
-html[data-theme="bauhaus-dark"] .theme-card,
-html.dark:not([data-theme]) .theme-card {
-  border: 2px solid #f9f8f6 !important;
-  box-shadow: 4px 4px 0px #facc15 !important;
-  transition: transform 0.15s ease, box-shadow 0.15s ease !important;
-}
-html[data-theme="bauhaus-dark"] a.theme-card:hover,
-html.dark:not([data-theme]) a.theme-card:hover {
-  transform: translate(-2px, -2px) !important;
-  box-shadow: 6px 6px 0px #facc15 !important;
-}
-html[data-theme="bauhaus-dark"] header,
-html.dark:not([data-theme]) header {
-  border-bottom: 2px solid #f9f8f6 !important;
-  box-shadow: 0 4px 0px rgba(250, 204, 21, 0.2);
-}
-html[data-theme="bauhaus-dark"] .category-tab-btn,
-html.dark:not([data-theme]) .category-tab-btn {
-  border: 1.5px solid #f9f8f6 !important;
-  box-shadow: 2px 2px 0px #facc15;
-}
-html[data-theme="bauhaus-dark"] .meter-track,
-html.dark:not([data-theme]) .meter-track {
-  border: 1.5px solid #f9f8f6 !important;
-  border-radius: 4px !important;
-  background: #252830 !important;
-}
-
-/* 2. Technical Drafting Vellum / CAD Blueprint & CAD Night Schematic */
-html[data-theme="cad-blueprint"] .theme-card,
-html[data-theme="cad-dark"] .theme-card {
-  position: relative;
-}
-
-html[data-theme="cad-blueprint"] .theme-card {
-  border: 1.5px solid rgba(29, 78, 216, 0.28) !important;
-}
-html[data-theme="cad-dark"] .theme-card {
-  border: 1.5px solid rgba(56, 189, 248, 0.35) !important;
-}
-
-html[data-theme="cad-blueprint"] .theme-card::before,
-html[data-theme="cad-blueprint"] .theme-card::after,
-html[data-theme="cad-dark"] .theme-card::before,
-html[data-theme="cad-dark"] .theme-card::after {
-  content: '+';
-  position: absolute;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  pointer-events: none;
-  line-height: 1;
-}
-html[data-theme="cad-blueprint"] .theme-card::before,
-html[data-theme="cad-blueprint"] .theme-card::after {
-  color: #1d4ed8;
-}
-html[data-theme="cad-dark"] .theme-card::before,
-html[data-theme="cad-dark"] .theme-card::after {
-  color: #38bdf8;
-}
-html[data-theme="cad-blueprint"] .theme-card::before,
-html[data-theme="cad-dark"] .theme-card::before { top: 3px; left: 5px; }
-html[data-theme="cad-blueprint"] .theme-card::after,
-html[data-theme="cad-dark"] .theme-card::after { top: 3px; right: 5px; }
-
-html[data-theme="cad-blueprint"] a.theme-card:hover {
-  border-color: #1d4ed8 !important;
-  box-shadow: 0 8px 24px rgba(29, 78, 216, 0.12) !important;
-}
-html[data-theme="cad-dark"] a.theme-card:hover {
-  border-color: #38bdf8 !important;
-  box-shadow: 0 8px 24px rgba(56, 189, 248, 0.25) !important;
-}
-
-html[data-theme="cad-blueprint"] .meter-track {
-  border: 1px solid rgba(29, 78, 216, 0.3) !important;
-  border-radius: 2px !important;
-  background: #e0edfb !important;
-}
-html[data-theme="cad-blueprint"] .meter-fill {
-  background: #1d4ed8 !important;
-  border-radius: 1px !important;
-}
-
-html[data-theme="cad-dark"] .meter-track {
-  border: 1px solid rgba(56, 189, 248, 0.3) !important;
-  border-radius: 2px !important;
-  background: #132238 !important;
-}
-html[data-theme="cad-dark"] .meter-fill {
-  background: #38bdf8 !important;
-  border-radius: 1px !important;
-}
-
-/* 3. Creative Pinboard / Sticky Notes Atelier (Light) */
-html[data-theme="pinboard-atelier"] .theme-card {
-  border: 1px solid #ebd9c8 !important;
-  box-shadow: 0 8px 20px -4px rgba(78, 62, 45, 0.12), 0 3px 6px -2px rgba(78, 62, 45, 0.06) !important;
-  position: relative;
-  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
-}
-html[data-theme="pinboard-atelier"] a.theme-card:hover {
-  transform: translateY(-3px) !important;
-  box-shadow: 0 14px 30px -6px rgba(78, 62, 45, 0.2) !important;
-}
-html[data-theme="pinboard-atelier"] .meter-track {
-  background: #ebd9c8 !important;
-}
-
-/* 6. Pinboard Midnight (Dark) */
-html[data-theme="pinboard-dark"] .theme-card {
-  border: 1px solid #423932 !important;
-  box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.4), 0 3px 6px -2px rgba(0, 0, 0, 0.25) !important;
-  position: relative;
-  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
-}
-html[data-theme="pinboard-dark"] a.theme-card:hover {
-  transform: translateY(-3px) !important;
-  box-shadow: 0 14px 30px -6px rgba(0, 0, 0, 0.6) !important;
-}
-html[data-theme="pinboard-dark"] .meter-track {
-  background: #322b26 !important;
-}
-
-/* Organic sticky note tilts for Pinboard Atelier & Pinboard Midnight */
-.pinboard-tilt-0 {
-  transform: rotate(-1.2deg);
-}
-.pinboard-tilt-1 {
-  transform: rotate(1deg);
-}
-.pinboard-tilt-2 {
-  transform: rotate(-1.5deg);
-}
-.pinboard-tilt-3 {
-  transform: rotate(1.2deg);
-}
-
-.pinboard-tilt-0:hover,
-.pinboard-tilt-1:hover,
-.pinboard-tilt-2:hover,
-.pinboard-tilt-3:hover {
-  transform: rotate(0deg) scale(1.02);
-}
-
-.washi-tape-strip {
-  position: absolute;
-  top: -9px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 72px;
-  height: 16px;
-  background: rgba(250, 204, 21, 0.7);
-  backdrop-filter: blur(2px);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  pointer-events: none;
-  border-radius: 1px;
-  z-index: 5;
-}
-
 
 @layer base {
   * {

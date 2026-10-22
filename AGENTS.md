@@ -131,13 +131,26 @@ PIER_KEY=x node agent/index.mjs   # run the agent standalone (zero deps)
 - **Native `<datalist>`** popups render detached from dialogs in some browsers —
   use the anchored combobox pattern (`group-select.tsx`) instead.
 - **Themes**: Two-tier theme architecture (`pier-mode`: `system` | `dark` | `light`,
-  `pier-dark-theme`: `bauhaus-dark` | `cad-dark` | `pinboard-dark`,
-  `pier-light-theme`: `bauhaus-studio` | `cad-blueprint` | `pinboard-atelier`).
+  `pier-dark-theme`: `monokai-synth`, `pier-light-theme`: `opal-glass` — one theme per mode).
   In `system` mode, `computeEffectiveTheme()` reacts live to OS `prefers-color-scheme` to activate the user's
   preferred dark or light theme. An inline `<script>` in `<head>` (`src/app/layout.tsx`) sets
   `document.documentElement.dataset.theme` and toggles `.dark` synchronously before first paint
-  to eliminate flash of unstyled content (FOUC). Dedicated design treatments apply distinct borders,
-  shadows, corner marks, and meter bars per theme.
+  to eliminate flash of unstyled content (FOUC). Each theme is a full design system: CSS vars +
+  treatments in `globals.css` (`.theme-card`, header, tabs, meters), a card variant in
+  `tile-card.tsx`, and a dashboard ribbon. Primary CTAs share the `button.bg-accent-gradient`
+  hook and are reskinned per theme (pill capsule in Opal Glass, 45°-cut cyberdeck button in
+  Monokai Synth). Opal Glass also styles *elements*, not just classes: native
+  `input`/`textarea`/`select`, inactive tabs, and meters sit in debossed opaque slate wells
+  (`.category-tab-btn:not(.bg-primary)` keeps the active pill intact) — so native inputs pick
+  up the treatment automatically while custom button-built controls (e.g. the group-select
+  trigger) do not. There is **no base sans font** — each theme overrides
+  `--font-geist-sans` on its token block (Fira Code body + JetBrains Mono headings for Monokai
+  Synth, Plus Jakarta Sans for Opal Glass; the `:root`/`.dark` fallback blocks carry the same
+  override), with all fonts loaded via `next/font` in `layout.tsx`. A new theme that forgets the
+  override renders in `system-ui`.
+  Animate cards with paint-cheap properties only
+  (`transform`, `background-color`, `box-shadow`) — never `filter` on `backdrop-filter`ed cards
+  (per-frame backdrop re-blur = jank).
 - **Search & Filters**: The header search input (`/` shortcut) integrates with Dashboard state
   to filter links by title, url, description, and group. In edit layout mode, search and category
   pill filters are temporarily deactivated to maintain drag-and-drop reordering fidelity.

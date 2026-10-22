@@ -23,9 +23,9 @@ import {
 
 const SERVER_CONFIG: ThemeConfig = {
   mode: "system",
-  darkTheme: "bauhaus-dark",
-  lightTheme: "bauhaus-studio",
-  effectiveTheme: "bauhaus-dark",
+  darkTheme: "monokai-synth",
+  lightTheme: "opal-glass",
+  effectiveTheme: "monokai-synth",
   isDark: true,
 };
 
